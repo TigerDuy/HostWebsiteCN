@@ -67,7 +67,7 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 ### 1. Clone Repository
 ```bash
 git clone <repository>
-cd DuAn
+cd DoAnChuyenNganh
 ```
 
 ### 2. Cài Đặt Backend
@@ -176,7 +176,7 @@ DELETE /admin/user/:id      - Xóa người dùng
 ## 📁 Cấu Trúc Project
 
 ```
-DuAn/
+DoAnChuyenNganh/
 ├── backend/
 │   ├── config/
 │   │   ├── db.js
