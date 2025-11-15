@@ -1,0 +1,19 @@
+{
+  "backedUpAt": "2025-11-13T02:17:20.361Z",
+  "config": {
+    "host": "localhost",
+    "user": "root",
+    "database": "cookingdb",
+    "port": 3306
+  },
+  "userBefore": {
+    "id": 4,
+    "username": "admin",
+    "email": "admin@gmail.com",
+    "password": "$2b$10$2J2ow0qOtz.UIyp6041d1eBfoaLsw/EferbsL9DlPC.ndMq.t0LKy",
+    "created_at": "2025-11-13T02:14:09.000Z",
+    "role": "user"
+  },
+  "changeFrom": "user",
+  "changeTo": "admin"
+}

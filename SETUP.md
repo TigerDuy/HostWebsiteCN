@@ -89,7 +89,7 @@ node server.js
 
 ### 3.1 Chuyển vào thư mục frontend
 ```bash
-cd cooking-app
+cd cookshare
 ```
 
 ### 3.2 Cài đặt dependencies
@@ -209,7 +209,7 @@ ifconfig
 ```
 
 ### 2. Cập nhật API URL
-Trong `cooking-app/src/`, thay thế:
+Trong `cookshare/src/`, thay thế:
 ```javascript
 // Thay từ
 http://localhost:3001
@@ -294,7 +294,7 @@ kill -9 <pid>
 ### Xóa node_modules
 ```bash
 # Frontend
-cd cooking-app && rm -rf node_modules && npm install
+cd cookshare && rm -rf node_modules && npm install
 
 # Backend
 cd backend && rm -rf node_modules && npm install

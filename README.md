@@ -1,4 +1,4 @@
-# 🍳 Cooking App - Website Chia Sẻ Công Thức Nấu Ăn
+# 🍳 CookShare - Website Chia Sẻ Công Thức Nấu Ăn
 
 Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các công thức nấu ăn, lấy cảm hứng từ **Cookpad**.
 
@@ -102,7 +102,7 @@ npm start
 ### 3. Cài Đặt Frontend
 
 ```bash
-cd cooking-app
+cd cookshare
 npm install
 npm start
 # App chạy tại http://localhost:3000
@@ -193,7 +193,7 @@ DuAn/
 │   ├── server.js
 │   └── package.json
 │
-├── cooking-app/
+├── cookshare/
 │   ├── public/
 │   ├── src/
 │   │   ├── components/

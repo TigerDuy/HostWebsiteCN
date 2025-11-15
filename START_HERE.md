@@ -1,4 +1,4 @@
-# 🎊 HOÀN THÀNH - COOKING APP PROJECT
+# 🎊 HOÀN THÀNH - COOKSHARE PROJECT
 
 ## 📌 TÓML LƯỢC
 
@@ -46,7 +46,7 @@ node server.js
 
 ### Frontend
 ```bash
-cd cooking-app
+cd cookshare
 npm install
 npm start
 # ✅ http://localhost:3000
@@ -202,7 +202,7 @@ cd backend && node server.js
 
 ### 3️⃣ Start Frontend
 ```bash
-cd cooking-app && npm start
+cd cookshare && npm start
 ```
 
 ### 4️⃣ Open Browser
@@ -287,7 +287,7 @@ Password: admin123
 
 ```
 ╔════════════════════════════════════╗
-║  ✅ COOKING APP - COMPLETE ✅     ║
+║  ✅ COOKSHARE - COMPLETE ✅        ║
 ║                                    ║
 ║  Features: ✅ 7/7 Done            ║
 ║  Code Quality: ✅ High             ║
