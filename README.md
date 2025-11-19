@@ -110,7 +110,7 @@ npm start
 
 ---
 
-## 📝 API Documentation
+##  API Documentation
 
 ### Authentication
 ```
@@ -269,4 +269,5 @@ MIT License - Sử dụng tự do
 ---
 
 **Happy Cooking! **
+
 
