@@ -1,50 +1,50 @@
-# 🍳 CookShare - Website Chia Sẻ Công Thức Nấu Ăn
+#  CookShare - Website Chia Sẻ Công Thức Nấu Ăn
 
 Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các công thức nấu ăn, lấy cảm hứng từ **Cookpad**.
 
-## 🌟 Tính Năng
+##  Tính Năng
 
-### ✅ Đã Hoàn Thiện
+###  Đã Hoàn Thiện
 
 #### **Xác Thực & Người Dùng**
-- ✅ Đăng ký tài khoản với validation
-- ✅ Đăng nhập với JWT token
-- ✅ Đăng xuất
-- ✅ Phân quyền Admin
+-  Đăng ký tài khoản với validation
+-  Đăng nhập với JWT token
+-  Đăng xuất
+-  Phân quyền Admin
 
 #### **Công Thức Nấu Ăn**
-- ✅ Tạo công thức (tiêu đề, nguyên liệu, cách làm, ảnh)
-- ✅ Xem danh sách công thức
-- ✅ Xem chi tiết công thức
-- ✅ Sửa công thức (chỉ tác giả)
-- ✅ Xóa công thức (chỉ tác giả)
-- ✅ Upload ảnh với Cloudinary
+-  Tạo công thức (tiêu đề, nguyên liệu, cách làm, ảnh)
+-  Xem danh sách công thức
+-  Xem chi tiết công thức
+-  Sửa công thức (chỉ tác giả)
+-  Xóa công thức (chỉ tác giả)
+-  Upload ảnh với Cloudinary
 
 #### **Tìm Kiếm & Lọc**
-- ✅ Tìm kiếm công thức theo tiêu đề
-- ✅ Trang kết quả tìm kiếm
+-  Tìm kiếm công thức theo tiêu đề
+-  Trang kết quả tìm kiếm
 
 #### **Tương Tác**
-- ✅ Bình luận công thức
-- ✅ Đánh giá công thức (1-5 sao)
-- ✅ Xem thống kê đánh giá (biểu đồ)
-- ✅ Yêu thích công thức
+-  Bình luận công thức
+-  Đánh giá công thức (1-5 sao)
+-  Xem thống kê đánh giá (biểu đồ)
+-  Yêu thích công thức
 
 #### **Quản Trị Admin**
-- ✅ Xem danh sách công thức
-- ✅ Xem danh sách người dùng
-- ✅ Xóa công thức
-- ✅ Xóa người dùng
-- ✅ Dashboard với thống kê
+-  Xem danh sách công thức
+-  Xem danh sách người dùng
+-  Xóa công thức
+-  Xóa người dùng
+-  Dashboard với thống kê
 
 #### **Giao Diện**
-- ✅ Responsive design (PC, tablet, mobile)
-- ✅ UI hiện đại và dễ sử dụng
-- ✅ Gradient colors và animations
+-  Responsive design (PC, tablet, mobile)
+-  UI hiện đại và dễ sử dụng
+-  Gradient colors và animations
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **React 19** - UI library
@@ -62,7 +62,7 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 
 ---
 
-## 📦 Cài Đặt
+##  Cài Đặt
 
 ### 1. Clone Repository
 ```bash
@@ -161,19 +161,19 @@ DELETE /admin/user/:id      - Xóa người dùng
 
 ---
 
-## 👥 Tài Khoản Test
+##  Tài Khoản Test
 
 ### Admin
-- Email: `admin@cooking.com`
-- Password: `admin123`
+- Email: `	admin@gmail.com`
+- Password: `123456`
 
 ### User
-- Email: `user@cooking.com`
-- Password: `user123`
+- Email: `test@gmail.com`
+- Password: `123456`
 
 ---
 
-## 📁 Cấu Trúc Project
+##  Cấu Trúc Project
 
 ```
 DoAnChuyenNganh/
@@ -219,7 +219,7 @@ DoAnChuyenNganh/
 
 ---
 
-## 🚀 Tính Năng Nâng Cao (Có thể thêm)
+##  Tính Năng Nâng Cao (Có thể thêm)
 
 - [ ] Follow người dùng
 - [ ] Like bình luận
@@ -234,7 +234,7 @@ DoAnChuyenNganh/
 
 ---
 
-## 🎨 Màu Sắc & Style
+##  Màu Sắc & Style
 
 - **Primary Color**: `#ff7f50` (Cam)
 - **Secondary Color**: `#ff6347` (Đỏ cam)
@@ -243,7 +243,7 @@ DoAnChuyenNganh/
 
 ---
 
-## 📝 Ghi Chú
+##  Ghi Chú
 
 - Tất cả mật khẩu được mã hóa bằng **bcrypt**
 - JWT token hết hạn sau **7 ngày**
@@ -252,7 +252,7 @@ DoAnChuyenNganh/
 
 ---
 
-## 🤝 Hỗ Trợ
+##  Hỗ Trợ
 
 Nếu có vấn đề, vui lòng:
 1. Kiểm tra backend chạy tại `http://localhost:3001`
@@ -262,10 +262,11 @@ Nếu có vấn đề, vui lòng:
 
 ---
 
-## 📄 License
+##  License
 
 MIT License - Sử dụng tự do
 
 ---
 
-**Happy Cooking! 🍳👨‍🍳**
+**Happy Cooking! **
+
