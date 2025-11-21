@@ -1,8 +1,7 @@
-# 🎊 HOÀN THÀNH - COOKSHARE PROJECT
+# HOÀN THÀNH - COOKSHARE PROJECT
 
 ## 📌 TÓML LƯỢC
 
-Bạn yêu cầu: **"Thực hiện toàn bộ"**  
 Kết quả: **✅ 100% HOÀN THÀNH**
 
 ---
@@ -34,7 +33,7 @@ Kết quả: **✅ 100% HOÀN THÀNH**
 
 ---
 
-## 🚀 CÓ THỂ CHẠY NGAY
+
 
 ### Backend
 ```bash
@@ -60,8 +59,8 @@ mysql -u root -p cooking_app < database.sql
 
 ### Login Test
 ```
-Email: admin@cooking.com
-Password: admin123
+Email: admin@gmail.com
+Password: 123456
 ```
 
 ---
@@ -197,7 +196,7 @@ mysql -u root -p cooking_app < database.sql
 
 ### 2️⃣ Start Backend
 ```bash
-cd backend && node server.js
+cd backend && npm start
 ```
 
 ### 3️⃣ Start Frontend
@@ -212,8 +211,8 @@ http://localhost:3000
 
 ### 5️⃣ Login
 ```
-Email: admin@cooking.com
-Password: admin123
+Email: test@gmail.com
+Password: 123456
 ```
 
 ---
@@ -359,3 +358,4 @@ This is a **complete, working application** that:
 **Status**: ✅ READY FOR PRODUCTION
 
 🎊 **CONGRATULATIONS!** 🎊
+
