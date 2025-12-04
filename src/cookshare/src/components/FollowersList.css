@@ -1,0 +1,8 @@
+.followers-list-component ul { list-style: none; padding: 0; margin: 0; }
+.user-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.user-left { display: flex; align-items: center; gap: 10px; }
+.follower-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.follower-placeholder { width: 36px; height: 36px; border-radius: 50%; background: #eee; display:flex; align-items:center; justify-content:center; font-weight:700; color:#666; }
+.user-link { color: #3b82f6; text-decoration: underline; }
+.user-actions { margin-left: 12px; }
+.btn-load { margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: #fff; border: 1px solid #f0f0f0; }
