@@ -21,6 +21,8 @@ function stripNoise(str) {
   if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1).trim();
    // remove any previous enrichment suffix after em dash
   s = s.replace(/\s+—\s+.*$/g, "").trim();
+  // remove known tip parentheses anywhere in string
+  s = s.replace(/\(giữ[^)]*\)/gi, "");
   // remove trailing parentheses note from previous run
   s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();
   // remove leading/trailing brackets residue
@@ -92,7 +94,7 @@ function enrichSteps(lines) {
       const clean = line.trim();
       if (!clean) return "";
       const tip = tips[idx % tips.length];
-      if (clean.length > 80) return clean; // đã đủ chi tiết
+      if (clean.length > 80 || clean.toLowerCase().includes(tip.toLowerCase())) return clean;
       return `${clean}. ${tip}`;
     })
     .filter(Boolean);
