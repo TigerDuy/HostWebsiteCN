@@ -14,6 +14,18 @@ function isSimpleRecipe(ingLines, stepLines) {
   return ingLines.length <= 6 && stepLines.length <= 4;
 }
 
+function stripNoise(str) {
+  let s = `${str}`.trim();
+  if (!s) return "";
+  // remove surrounding quotes
+  if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1).trim();
+  // remove trailing parentheses note from previous run
+  s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+  // remove leading/trailing brackets residue
+  s = s.replace(/^\[+/, "").replace(/\]+$/, "").trim();
+  return s;
+}
+
 // Try to normalize lines: handle JSON-like ["a","b"] or newline-separated strings
 function normalizeLines(raw) {
   const text = raw || "";
@@ -25,7 +37,7 @@ function normalizeLines(raw) {
     try {
       const arr = JSON.parse(trimmed);
       if (Array.isArray(arr)) {
-        return arr.map((s) => `${s}`.trim()).filter(Boolean);
+        return arr.map((s) => stripNoise(s)).filter(Boolean);
       }
     } catch (e) {
       // fall back to split by newline
@@ -34,7 +46,7 @@ function normalizeLines(raw) {
 
   return text
     .split("\n")
-    .map((s) => s.trim())
+    .map((s) => stripNoise(s))
     .filter(Boolean);
 }
 
