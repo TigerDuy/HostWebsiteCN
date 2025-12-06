@@ -102,7 +102,10 @@ function AccountSettings() {
   return (
     <div className="profile-container">
       <div className="profile-content">
-        <h1>⚙️ Cài Đặt Tài Khoản</h1>
+        <div className="settings-header">
+          <h1>⚙️ Cài Đặt Tài Khoản</h1>
+          <button onClick={() => navigate(`/user/${userId}`)} className="btn-profile-link">👤 Trang cá nhân</button>
+        </div>
         {error && <div className="error-message">{error}</div>}
         {message && <div className="success-message">{message}</div>}
 
