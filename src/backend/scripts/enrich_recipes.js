@@ -19,6 +19,8 @@ function stripNoise(str) {
   if (!s) return "";
   // remove surrounding quotes
   if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1).trim();
+   // remove any previous enrichment suffix after em dash
+  s = s.replace(/\s+—\s+.*$/g, "").trim();
   // remove trailing parentheses note from previous run
   s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();
   // remove leading/trailing brackets residue
@@ -42,6 +44,14 @@ function normalizeLines(raw) {
     } catch (e) {
       // fall back to split by newline
     }
+  }
+
+  // Handle comma-separated with quotes: "a","b","c"
+  if (trimmed.includes('","')) {
+    let text = trimmed;
+    if (text.startsWith('"')) text = text.slice(1);
+    if (text.endsWith('"')) text = text.slice(0, -1);
+    return text.split('","').map((s) => stripNoise(s)).filter(Boolean);
   }
 
   return text
