@@ -3,6 +3,7 @@ import FollowButton from './FollowButton';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import AvatarCropper from './AvatarCropper';
+import './ProfileHeader.css';
 
 export default function ProfileHeader({ user, counts = { followers:0, following:0 }, currentUserId, onAvatarUploaded }) {
   const inputRef = useRef(null);
@@ -42,7 +43,7 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
       const token = localStorage.getItem('token');
       const fd = new FormData();
       fd.append('avatar', croppedFile);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${user.id}/avatar`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${user.id}/avatar`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
       const newUrl = res.data.avatar_url;
       if (onAvatarUploaded) onAvatarUploaded(newUrl);
     } catch (err) {
@@ -80,13 +81,11 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
         </div>
       </div>
       <div className="ph-right">
+        {currentUserId && parseInt(currentUserId,10) === user.id && (
+          <Link to="/settings" className="btn-edit-profile">⚙️ Chỉnh Sửa</Link>
+        )}
         {currentUserId && parseInt(currentUserId,10) !== user.id && (
           <FollowButton userId={user.id} />
-        )}
-        {currentUserId && parseInt(currentUserId,10) === user.id ? (
-          <Link to="/settings" className="btn-view-profile">Chỉnh sửa</Link>
-        ) : (
-          <Link to={`/user/${user.id}`} className="btn-view-profile">Xem trang cá nhân</Link>
         )}
       </div>
     </div>

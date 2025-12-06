@@ -19,14 +19,15 @@ function AccountSettings() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
     fetchUserProfile();
-  }, [token, navigate]);
+  }, [token, navigate, userId]);
 
   const fetchUserProfile = async () => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}`, { headers:{ Authorization:`Bearer ${token}` } });
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}`, { headers:{ Authorization:`Bearer ${token}` } });
       setUser(res.data);
       setFormData(prev => ({ ...prev, username: res.data.username, email: res.data.email }));
       setAvatarUrlInput(res.data.avatar_url || '');
@@ -50,7 +51,7 @@ function AccountSettings() {
     if (!formData.username || !formData.email) { setError('Vui lòng nhập đầy đủ thông tin!'); return; }
     try {
       setIsSaving(true);
-      const res = await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}`, { username: formData.username, email: formData.email, avatar_url: avatarUrlInput, bio: bioInput }, { headers:{ Authorization:`Bearer ${token}` } });
+      const res = await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}`, { username: formData.username, email: formData.email, avatar_url: avatarUrlInput, bio: bioInput }, { headers:{ Authorization:`Bearer ${token}` } });
       setMessage('✅ Cập nhật thành công!');
       setUser(res.data);
       localStorage.setItem('username', res.data.username);
@@ -72,7 +73,7 @@ function AccountSettings() {
     if (newPassword !== confirmPassword) { setError('Mật khẩu không trùng khớp!'); return; }
     try {
       setIsSaving(true);
-      await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/change-password/${userId}`, { currentPassword, newPassword }, { headers:{ Authorization:`Bearer ${token}` } });
+      await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/change-password/${userId}`, { currentPassword, newPassword }, { headers:{ Authorization:`Bearer ${token}` } });
       setMessage('✅ Đổi mật khẩu thành công!');
       setTimeout(() => { setFormData(prev => ({ ...prev, currentPassword:'', newPassword:'', confirmPassword:'' })); setMessage(''); }, 2000);
     } catch (err) {
@@ -86,7 +87,7 @@ function AccountSettings() {
     setUploading(true);
     try {
       const fd = new FormData(); fd.append('avatar', avatarFile);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}/avatar`, fd, { headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'multipart/form-data' } });
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}/avatar`, fd, { headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'multipart/form-data' } });
       setAvatarUrlInput(res.data.avatar_url || '');
       setUser(prev => ({ ...prev, avatar_url: res.data.avatar_url || prev.avatar_url }));
       setAvatarFile(null);

@@ -42,7 +42,7 @@ function Navbar() {
       const savedAvatar = localStorage.getItem('avatar_url');
       if (token && uid && (!savedAvatar || savedAvatar === '')) {
         try {
-          const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${uid}`, { headers: { Authorization: `Bearer ${token}` } });
+          const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${uid}`, { headers: { Authorization: `Bearer ${token}` } });
           const ava = res.data.avatar_url || '';
           if (ava) {
             localStorage.setItem('avatar_url', ava);
@@ -55,20 +55,28 @@ function Navbar() {
     };
     tryFetchProfileAvatar();
 
-    // Lắng nghe sự thay đổi localStorage từ tab/window khác
+    // Lắng nghe sự thay đổi localStorage từ tab khác
     const handleStorageChange = () => {
       updateAuthStatus();
     };
 
     window.addEventListener("storage", handleStorageChange);
+    
+    // Lắng nghe event từ login/logout trong cùng tab (storage event không hoạt động trong cùng tab)
+    const handleAuthUpdated = () => {
+      updateAuthStatus();
+    };
+    window.addEventListener('auth-updated', handleAuthUpdated);
+    
     // Lắng nghe sự kiện tùy chỉnh được dispatch sau khi upload avatar trong cùng tab
-    const handleAvatarUpdated = (e) => {
+    const handleAvatarUpdated = () => {
       updateAuthStatus();
     };
     window.addEventListener('avatar-updated', handleAvatarUpdated);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener('auth-updated', handleAuthUpdated);
       window.removeEventListener('avatar-updated', handleAvatarUpdated);
     };
   }, []);
@@ -85,7 +93,7 @@ function Navbar() {
     setAvatar("");
     
     // ✅ Trigger event để component khác update
-    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("auth-updated"));
     
     navigate("/login", { replace: true });
   };

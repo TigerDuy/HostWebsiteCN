@@ -27,7 +27,7 @@ function AdminDashboard() {
   const fetchRecipes = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/admin/recipes`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/admin/recipes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRecipes(res.data);
@@ -42,7 +42,7 @@ function AdminDashboard() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/admin/users`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data);
@@ -55,7 +55,7 @@ function AdminDashboard() {
     if (window.confirm("Xác nhận xóa công thức này?")) {
       try {
         const token = localStorage.getItem("token");
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/admin/delete/${id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/admin/delete/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Xóa công thức thành công!");
@@ -71,7 +71,7 @@ function AdminDashboard() {
     if (window.confirm("Xác nhận xóa người dùng này?")) {
       try {
         const token = localStorage.getItem("token");
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/admin/user/${id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/admin/user/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Xóa người dùng thành công!");

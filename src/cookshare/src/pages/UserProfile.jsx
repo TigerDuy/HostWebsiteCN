@@ -36,23 +36,44 @@ function UserProfile() {
   };
 
   const fetchUser = async () => {
-    const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/user/${id}`);
-    setUser(res.data);
+    try {
+      // Dùng public-profile endpoint (không cần token)
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/public-profile/${id}`);
+      setUser(res.data);
+    } catch (err) {
+      console.error('Lỗi fetch user:', err);
+      setUser({ id, username: "User", avatar_url: null, bio: "" });
+    }
   };
 
   const fetchCounts = async () => {
-    const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/counts/${id}`);
-    setCounts(res.data || { followers: 0, following: 0 });
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/counts/${id}`);
+      setCounts({ followers: res.data.followers || 0, following: res.data.following || 0 });
+    } catch (err) {
+      console.error('Lỗi fetch counts:', err);
+      setCounts({ followers: 0, following: 0 });
+    }
   };
 
   const fetchFollowers = async (page = 1) => {
-    const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/followers/${id}?page=${page}&limit=${followers.limit}`);
-    setFollowers(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/followers/${id}?page=${page}&limit=${followers.limit}`);
+      setFollowers(res.data);
+    } catch (err) {
+      console.error('Lỗi fetch followers:', err);
+      setFollowers(prev => ({ data: [], page: 1, total: 0, limit: 10 }));
+    }
   };
 
   const fetchFollowing = async (page = 1) => {
-    const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/following/${id}?page=${page}&limit=${following.limit}`);
-    setFollowing(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/following/${id}?page=${page}&limit=${following.limit}`);
+      setFollowing(res.data);
+    } catch (err) {
+      console.error('Lỗi fetch following:', err);
+      setFollowing(prev => ({ data: [], page: 1, total: 0, limit: 10 }));
+    }
   };
 
   if (loading) return <div className="userprofile-container">⏳ Đang tải...</div>;

@@ -22,7 +22,7 @@ function Login() {
         return;
       }
 
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/login`, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/login`, {
         email,
         password,
       });
@@ -33,11 +33,15 @@ function Login() {
       localStorage.setItem("userId", res.data.userId);
       localStorage.setItem("avatar_url", res.data.avatar_url || "");
 
-      // ✅ Trigger event để Navbar update
-      window.dispatchEvent(new Event("storage"));
-
       alert("✅ Đăng nhập thành công!");
-      navigate("/", { replace: true });
+      
+      // ✅ Trigger custom event để Navbar update ngay lập tức
+      window.dispatchEvent(new CustomEvent("auth-updated"));
+      
+      // Small delay để đảm bảo Navbar đã update state trước khi navigate
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 50);
     } catch (err) {
       setError(err.response?.data?.message || "Lỗi đăng nhập!");
     } finally {

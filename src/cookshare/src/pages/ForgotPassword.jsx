@@ -27,7 +27,7 @@ function ForgotPassword() {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/forgot-password`, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/forgot-password`, {
         email,
       });
 
@@ -53,7 +53,7 @@ function ForgotPassword() {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/verify-otp`, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/verify-otp`, {
         email,
         otp,
       });
@@ -91,7 +91,7 @@ function ForgotPassword() {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/reset-password`, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/reset-password`, {
         email,
         newPassword,
         tempToken,

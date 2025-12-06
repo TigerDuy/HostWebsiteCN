@@ -127,7 +127,8 @@ router.post("/login", (req, res) => {
         token,
         username: user.username,
         role: user.role,
-        userId: user.id
+        userId: user.id,
+        avatar_url: user.avatar_url || ""
       });
     }
   );
@@ -277,6 +278,23 @@ router.post("/reset-password", (req, res) => {
   }
 });
 
+// ✅ LẤY THÔNG TIN PROFILE PUBLIC (không cần token)
+router.get("/public-profile/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  db.query(
+    "SELECT id, username, avatar_url, bio FROM nguoi_dung WHERE id = ?",
+    [userId],
+    (err, result) => {
+      if (err || result.length === 0) {
+        return res.status(400).json({ message: "Người dùng không tồn tại!" });
+      }
+
+      return res.json(result[0]);
+    }
+  );
+});
+
 // ✅ LẤY THÔNG TIN PROFILE
 router.get("/profile/:userId", verifyToken, (req, res) => {
   // req.user được set bởi middleware verifyToken
@@ -287,7 +305,7 @@ router.get("/profile/:userId", verifyToken, (req, res) => {
   }
 
   db.query(
-    "SELECT id, username, email, role FROM nguoi_dung WHERE id = ?",
+    "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = ?",
     [userId],
     (err, result) => {
       if (err || result.length === 0) {
@@ -302,7 +320,7 @@ router.get("/profile/:userId", verifyToken, (req, res) => {
 // ✅ CẬP NHẬT THÔNG TIN PROFILE
 router.put("/profile/:userId", verifyToken, (req, res) => {
   const { userId } = req.params;
-  const { username, email } = req.body;
+  const { username, email, avatar_url, bio } = req.body;
 
   if (parseInt(userId) !== req.user.id) {
     return res.status(403).json({ message: "❌ Bạn không có quyền truy cập!" });
@@ -321,8 +339,8 @@ router.put("/profile/:userId", verifyToken, (req, res) => {
   }
 
   db.query(
-    "UPDATE nguoi_dung SET username = ?, email = ? WHERE id = ?",
-    [username, email, userId],
+    "UPDATE nguoi_dung SET username = ?, email = ?, avatar_url = ?, bio = ? WHERE id = ?",
+    [username, email, avatar_url || null, bio || null, userId],
     (err, result) => {
       if (err) {
         if (err.code === "ER_DUP_ENTRY") {
@@ -333,7 +351,7 @@ router.put("/profile/:userId", verifyToken, (req, res) => {
 
       // Trả về thông tin người dùng sau cập nhật
       db.query(
-        "SELECT id, username, email, role FROM nguoi_dung WHERE id = ?",
+        "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = ?",
         [userId],
         (err, result) => {
           if (err || result.length === 0) {
@@ -400,6 +418,65 @@ router.post("/change-password/:userId", verifyToken, async (req, res) => {
     );
   } catch (err) {
     return res.status(500).json({ message: "Lỗi server: " + err.message });
+  }
+});
+
+// ✅ UPLOAD AVATAR
+const multer = require("multer");
+const cloudinary = require("../config/cloudinary");
+const fs = require("fs");
+const path = require("path");
+
+const upload = multer({ dest: "uploads/" });
+
+router.post("/profile/:userId/avatar", verifyToken, upload.single("avatar"), async (req, res) => {
+  const { userId } = req.params;
+
+  if (parseInt(userId) !== req.user.id) {
+    return res.status(403).json({ message: "❌ Bạn không có quyền truy cập!" });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: "❌ Vui lòng chọn file ảnh!" });
+  }
+
+  let avatarUrl = null;
+
+  try {
+    // Try Cloudinary first
+    try {
+      const uploadImg = await cloudinary.uploader.upload(req.file.path, { resource_type: 'image' });
+      avatarUrl = uploadImg.secure_url;
+      fs.unlink(req.file.path, () => {});
+    } catch (uploadErr) {
+      console.warn("⚠️  Cloudinary upload failed, attempt local fallback:", uploadErr.message);
+      // Local fallback
+      try {
+        const ext = path.extname(req.file.originalname) || ".jpg";
+        const newName = req.file.filename + ext;
+        const target = path.join(__dirname, "..", "uploads", newName);
+        fs.renameSync(req.file.path, target);
+        avatarUrl = `http://localhost:3001/uploads/${newName}`;
+      } catch (localErr) {
+        console.warn("⚠️  Local fallback failed:", localErr.message);
+        try { fs.unlinkSync(req.file.path); } catch(e){}
+        return res.status(500).json({ message: "❌ Lỗi upload avatar!" });
+      }
+    }
+
+    // Update database
+    db.query(
+      "UPDATE nguoi_dung SET avatar_url = ? WHERE id = ?",
+      [avatarUrl, userId],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ message: "❌ Lỗi cập nhật avatar!" });
+        }
+        return res.json({ message: "✅ Upload avatar thành công!", avatar_url: avatarUrl });
+      }
+    );
+  } catch (err) {
+    return res.status(500).json({ message: "❌ Lỗi server: " + err.message });
   }
 });
 

@@ -5,11 +5,11 @@ export default function FollowButton({ userId }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // TODO: Follow endpoints chưa tạo
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return; // not logged in
-
-    axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/is-following/${userId}`, {
+    if (!token) return;
+    axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/is-following/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     .then(res => setIsFollowing(!!res.data.isFollowing))
@@ -25,10 +25,10 @@ export default function FollowButton({ userId }) {
     setLoading(true);
     try {
       if (isFollowing) {
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
         setIsFollowing(false);
       } else {
-        await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/${userId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${userId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
         setIsFollowing(true);
       }
     } catch (err) {
