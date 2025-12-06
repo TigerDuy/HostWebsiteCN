@@ -14,37 +14,66 @@ function isSimpleRecipe(ingLines, stepLines) {
   return ingLines.length <= 6 && stepLines.length <= 4;
 }
 
+// Try to normalize lines: handle JSON-like ["a","b"] or newline-separated strings
+function normalizeLines(raw) {
+  const text = raw || "";
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  // Attempt JSON parse if looks like array
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (Array.isArray(arr)) {
+        return arr.map((s) => `${s}`.trim()).filter(Boolean);
+      }
+    } catch (e) {
+      // fall back to split by newline
+    }
+  }
+
+  return text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function enrichIngredients(lines) {
   const extras = [
-    "tươi ngon",
-    "chất lượng",
-    "đầy hương vị",
-    "đã sơ chế sạch",
-    "đậm đà",
+    "chọn loại tươi ngon để giữ vị ngọt tự nhiên",
+    "được sơ chế sạch sẽ, an toàn khi nấu",
+    "giúp hương vị đậm đà và tròn vị hơn",
+    "cắt đều tay để chín cùng lúc",
+    "giữ nguyên độ giòn và màu sắc đẹp",
   ];
-  return lines.map((line, idx) => {
-    const clean = line.trim();
-    if (!clean) return "";
-    const extra = extras[idx % extras.length];
-    if (clean.length > 40) return clean; // đủ dài rồi
-    return `${clean} (${extra})`;
-  }).filter(Boolean);
+  return lines
+    .map((line, idx) => {
+      const clean = line.trim();
+      if (!clean) return "";
+      const extra = extras[idx % extras.length];
+      if (clean.length > 60) return clean; // đủ dài rồi
+      return `${clean} — ${extra}`;
+    })
+    .filter(Boolean);
 }
 
 function enrichSteps(lines) {
   const tips = [
-    "giữ lửa vừa để không cháy",
-    "đảo nhẹ tay cho thấm đều",
-    "nêm nếm lại trước khi tắt bếp",
-    "để nghỉ 2-3 phút cho hương vị hòa quyện",
-    "trình bày ra đĩa ấm để ngon hơn",
+    "Giữ lửa vừa để nguyên liệu chín đều mà không bị cháy.",
+    "Đảo nhẹ tay, giúp gia vị thấm sâu và dậy mùi thơm.",
+    "Nêm nếm lại trước khi tắt bếp để cân bằng vị.",
+    "Để nghỉ 2-3 phút cho hương vị hòa quyện rồi hãy dùng.",
+    "Trình bày trên đĩa ấm để giữ độ ngon lâu hơn.",
   ];
-  return lines.map((line, idx) => {
-    const clean = line.trim();
-    if (!clean) return "";
-    const tip = tips[idx % tips.length];
-    return `${clean} (${tip})`;
-  }).filter(Boolean);
+  return lines
+    .map((line, idx) => {
+      const clean = line.trim();
+      if (!clean) return "";
+      const tip = tips[idx % tips.length];
+      if (clean.length > 80) return clean; // đã đủ chi tiết
+      return `${clean}. ${tip}`;
+    })
+    .filter(Boolean);
 }
 
 async function main() {
@@ -53,8 +82,8 @@ async function main() {
     console.log(`Found ${recipes.length} recipes.`);
 
     for (const r of recipes) {
-      const ingLines = (r.ingredients || "").split("\n").map(s => s.trim()).filter(Boolean);
-      const stepLines = (r.steps || "").split("\n").map(s => s.trim()).filter(Boolean);
+      const ingLines = normalizeLines(r.ingredients);
+      const stepLines = normalizeLines(r.steps);
 
       const newIngredients = enrichIngredients(ingLines);
       const newSteps = enrichSteps(stepLines);
