@@ -23,7 +23,7 @@ function Search() {
   const fetchSearch = async (query) => {
     try {
       setLoading(true);
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/search?q=${query}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/search?q=${query}`);
       setRecipes(res.data);
     } catch (err) {
       console.error("❌ Lỗi tìm kiếm:", err);

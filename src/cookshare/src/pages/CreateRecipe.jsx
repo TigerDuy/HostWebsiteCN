@@ -123,7 +123,7 @@ function CreateRecipe() {
 
     try {
       setLoading(true);
-      await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/create`, formData, {
+      await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/create`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

@@ -1,6 +1,8 @@
 const express = require("express");
 const db = require("../config/db");
 const { verifyToken } = require("../middleware/auth");
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = process.env.SECRET_KEY || process.env.JWT_SECRET || "SECRET_KEY";
 const multer = require("multer");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
@@ -68,7 +70,7 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
             const newName = req.file.filename + ext;
             const target = path.join(__dirname, "..", "uploads", newName);
             fs.renameSync(req.file.path, target);
-            imageUrl = `${req.protocol}://${req.get("host")}/uploads/${newName}`;
+            imageUrl = `http://localhost:3001/uploads/${newName}`;
           } catch (localErr) {
             console.warn("⚠️  Local fallback failed:", localErr.message);
             imageUrl = null;
@@ -83,7 +85,7 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
           const newName = req.file.filename + ext;
           const target = path.join(__dirname, "..", "uploads", newName);
           fs.renameSync(req.file.path, target);
-          imageUrl = `${req.protocol}://${req.get("host")}/uploads/${newName}`;
+          imageUrl = `http://localhost:3001/uploads/${newName}`;
         } catch (localErr) {
           console.warn("⚠️  Local fallback failed:", localErr.message);
           imageUrl = null;
@@ -107,94 +109,337 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
   }
 });
 
-// ✅ API lấy danh sách công thức
+// ✅ API lấy danh sách công thức (với stats)
 router.get("/list", (req, res) => {
-  db.query(
-    "SELECT cong_thuc.*, nguoi_dung.username FROM cong_thuc JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id ORDER BY cong_thuc.created_at DESC",
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy danh sách công thức!" });
-      res.json(result);
-    }
-  );
+  db.query(`
+    SELECT 
+      cong_thuc.*,
+      nguoi_dung.username,
+      nguoi_dung.avatar_url,
+      COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+      COUNT(DISTINCT danh_gia.id) as rating_count,
+      COUNT(DISTINCT favorite.id) as favorite_count
+    FROM cong_thuc 
+    JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+    LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+    LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+    GROUP BY cong_thuc.id
+    ORDER BY avg_rating DESC, cong_thuc.created_at DESC
+  `, (err, result) => {
+    if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy danh sách công thức!" });
+    res.json(result);
+  });
 });
 
-// ✅ API tìm kiếm công thức
+// ✅ API tìm kiếm công thức (với stats)
 router.get("/search", (req, res) => {
   const q = req.query.q || "";
   
-  db.query(
-    "SELECT cong_thuc.*, nguoi_dung.username FROM cong_thuc JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id WHERE cong_thuc.title LIKE ? ORDER BY cong_thuc.created_at DESC",
-    [`%${q}%`],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
-      res.json(result);
-    }
-  );
+  db.query(`
+    SELECT 
+      cong_thuc.*,
+      nguoi_dung.username,
+      nguoi_dung.avatar_url,
+      COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+      COUNT(DISTINCT danh_gia.id) as rating_count,
+      COUNT(DISTINCT favorite.id) as favorite_count
+    FROM cong_thuc 
+    JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+    LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+    LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+    WHERE cong_thuc.title LIKE ?
+    GROUP BY cong_thuc.id
+    ORDER BY avg_rating DESC, cong_thuc.created_at DESC
+  `, [`%${q}%`], (err, result) => {
+    if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
+    res.json(result);
+  });
 });
 
-// ✅ API xem chi tiết công thức theo ID
+// ✅ API xem chi tiết công thức theo ID (với stats)
 router.get("/detail/:id", (req, res) => {
   const recipeId = req.params.id;
 
-  db.query(
-    "SELECT cong_thuc.*, nguoi_dung.username FROM cong_thuc JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id WHERE cong_thuc.id = ?",
-    [recipeId],
-    (err, result) => {
-      if (err || result.length === 0)
-        return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
-      res.json(result[0]);
-    }
-  );
+  db.query(`
+    SELECT 
+      cong_thuc.*,
+      nguoi_dung.username,
+      nguoi_dung.avatar_url,
+      COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+      COUNT(DISTINCT danh_gia.id) as rating_count,
+      COUNT(DISTINCT favorite.id) as favorite_count
+    FROM cong_thuc 
+    JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+    LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+    LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+    WHERE cong_thuc.id = ?
+    GROUP BY cong_thuc.id
+  `, [recipeId], (err, result) => {
+    if (err || result.length === 0)
+      return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
+    res.json(result[0]);
+  });
 });
 
 // ✅ API thêm bình luận
+// ✅ API thêm bình luận (hỗ trợ trả lời bình luận qua parent_id)
 router.post("/comment", verifyToken, (req, res) => {
-  const { recipe_id, comment } = req.body;
+  const { recipe_id, comment, parent_id = null } = req.body;
   const user_id = req.user.id;
 
   if (!comment || !recipe_id) {
     return res.status(400).json({ message: "❌ Bình luận không được để trống!" });
   }
 
-  db.query(
-    "INSERT INTO binh_luan (recipe_id, user_id, comment, created_at) VALUES (?, ?, ?, NOW())",
-    [recipe_id, user_id, comment],
-    (err) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi khi thêm bình luận!" });
-      res.json({ message: "✅ Đã gửi bình luận!" });
-    }
-  );
+  // Nếu là reply, kiểm tra bình luận cha thuộc cùng công thức
+  const insertComment = () => {
+    db.query(
+      "INSERT INTO binh_luan (recipe_id, user_id, comment, parent_id, created_at) VALUES (?, ?, ?, ?, NOW())",
+      [recipe_id, user_id, comment, parent_id || null],
+      (err) => {
+        if (err) return res.status(500).json({ message: "❌ Lỗi khi thêm bình luận!" });
+        res.json({ message: "✅ Đã gửi bình luận!" });
+      }
+    );
+  };
+
+  if (parent_id) {
+    db.query(
+      "SELECT id, recipe_id FROM binh_luan WHERE id = ?",
+      [parent_id],
+      (err, result) => {
+        if (err || result.length === 0) {
+          return res.status(400).json({ message: "❌ Bình luận gốc không tồn tại!" });
+        }
+        if (result[0].recipe_id !== Number(recipe_id)) {
+          return res.status(400).json({ message: "❌ Bình luận gốc không thuộc công thức này!" });
+        }
+        insertComment();
+      }
+    );
+  } else {
+    insertComment();
+  }
 });
 
-// ✅ API lấy danh sách bình luận
+// ✅ API lấy danh sách bình luận (hỗ trợ sort & like count & liked_by_current)
 router.get("/comment/:id", (req, res) => {
   const recipeId = req.params.id;
+  const sort = (req.query.sort || "latest").toLowerCase();
 
+  let orderClause = "ORDER BY binh_luan.created_at DESC";
+  if (sort === "oldest") orderClause = "ORDER BY binh_luan.created_at ASC";
+  if (sort === "top") orderClause = "ORDER BY like_count DESC, binh_luan.created_at DESC";
+
+  let currentUserId = null;
+  const authHeader = req.headers["authorization"];
+  if (authHeader) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, SECRET_KEY);
+      currentUserId = decoded.id;
+    } catch (e) {
+      // ignore invalid token, treat as public
+    }
+  }
+
+  const query = `
+    SELECT 
+      binh_luan.*, 
+      nguoi_dung.username, 
+      nguoi_dung.avatar_url,
+      COALESCE(COUNT(DISTINCT comment_likes.id), 0) as like_count,
+      ${currentUserId ? "SUM(CASE WHEN comment_likes.user_id = ? THEN 1 ELSE 0 END) > 0 AS is_liked" : "FALSE as is_liked"}
+    FROM binh_luan 
+    JOIN nguoi_dung ON binh_luan.user_id = nguoi_dung.id
+    LEFT JOIN comment_likes ON comment_likes.comment_id = binh_luan.id
+    WHERE binh_luan.recipe_id = ?
+    GROUP BY binh_luan.id
+    ${orderClause}`;
+
+  const params = currentUserId ? [currentUserId, recipeId] : [recipeId];
+
+  db.query(query, params, (err, result) => {
+    if (err) {
+      console.error("Comment fetch error", err);
+      return res.status(500).json({ message: "❌ Lỗi khi lấy bình luận!" });
+    }
+    res.json(result);
+  });
+});
+
+// ✅ API cập nhật bình luận
+router.put("/comment/:id", verifyToken, (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.user.id;
+  const { comment } = req.body;
+
+  if (!comment || comment.trim() === "") {
+    return res.status(400).json({ message: "❌ Bình luận không được để trống!" });
+  }
+
+  // Kiểm tra bình luận có thuộc user không
   db.query(
-    `SELECT binh_luan.*, nguoi_dung.username 
-     FROM binh_luan 
-     JOIN nguoi_dung ON binh_luan.user_id = nguoi_dung.id
-     WHERE recipe_id = ?
-     ORDER BY binh_luan.created_at DESC`,
-    [recipeId],
+    "SELECT user_id FROM binh_luan WHERE id = ?",
+    [commentId],
     (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy bình luận!" });
-      res.json(result);
+      if (err || result.length === 0) {
+        return res.status(400).json({ message: "❌ Bình luận không tồn tại!" });
+      }
+
+      if (result[0].user_id !== userId) {
+        return res.status(403).json({ message: "❌ Bạn không có quyền chỉnh sửa bình luận này!" });
+      }
+
+      // Cập nhật bình luận
+      db.query(
+        "UPDATE binh_luan SET comment = ? WHERE id = ?",
+        [comment, commentId],
+        (err) => {
+          if (err) return res.status(500).json({ message: "❌ Lỗi khi cập nhật bình luận!" });
+          res.json({ message: "✅ Đã cập nhật bình luận!" });
+        }
+      );
     }
   );
 });
 
-// ✅ API lấy danh sách công thức của user đang đăng nhập
+// ✅ API xóa bình luận
+router.delete("/comment/:id", verifyToken, (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.user.id;
+
+  // Kiểm tra bình luận có thuộc user không
+  db.query(
+    "SELECT user_id FROM binh_luan WHERE id = ?",
+    [commentId],
+    (err, result) => {
+      if (err || result.length === 0) {
+        return res.status(400).json({ message: "❌ Bình luận không tồn tại!" });
+      }
+
+      if (result[0].user_id !== userId) {
+        return res.status(403).json({ message: "❌ Bạn không có quyền xóa bình luận này!" });
+      }
+
+      // Xóa bình luận
+      db.query(
+        "DELETE FROM binh_luan WHERE id = ?",
+        [commentId],
+        (err) => {
+          if (err) return res.status(500).json({ message: "❌ Lỗi khi xóa bình luận!" });
+          res.json({ message: "✅ Đã xóa bình luận!" });
+        }
+      );
+    }
+  );
+});
+
+// ✅ API like / unlike bình luận (toggle)
+router.post("/comment/:id/like", verifyToken, (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.user.id;
+
+  // Kiểm tra comment tồn tại
+  db.query("SELECT id FROM binh_luan WHERE id = ?", [commentId], (err, result) => {
+    if (err || result.length === 0) {
+      return res.status(400).json({ message: "❌ Bình luận không tồn tại!" });
+    }
+
+    // Kiểm tra đã like chưa
+    db.query(
+      "SELECT id FROM comment_likes WHERE comment_id = ? AND user_id = ?",
+      [commentId, userId],
+      (err2, liked) => {
+        if (err2) return res.status(500).json({ message: "❌ Lỗi khi kiểm tra like!" });
+
+        if (liked.length > 0) {
+          // Nếu đã like -> unlike
+          db.query(
+            "DELETE FROM comment_likes WHERE id = ?",
+            [liked[0].id],
+            (err3) => {
+              if (err3) return res.status(500).json({ message: "❌ Lỗi khi bỏ like!" });
+              return res.json({ message: "✅ Đã bỏ thích bình luận", liked: false });
+            }
+          );
+        } else {
+          // Chưa like -> like
+          db.query(
+            "INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)",
+            [commentId, userId],
+            (err4) => {
+              if (err4) return res.status(500).json({ message: "❌ Lỗi khi thích bình luận!" });
+              return res.json({ message: "✅ Đã thích bình luận", liked: true });
+            }
+          );
+        }
+      }
+    );
+  });
+});
+
+// ✅ API lấy danh sách công thức của user đang đăng nhập (với stats)
 router.get("/my", verifyToken, (req, res) => {
   const user_id = req.user.id;
 
+  db.query(`
+    SELECT 
+      cong_thuc.*,
+      nguoi_dung.username,
+      nguoi_dung.avatar_url,
+      COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+      COUNT(DISTINCT danh_gia.id) as rating_count,
+      COUNT(DISTINCT favorite.id) as favorite_count
+    FROM cong_thuc
+    JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+    LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+    LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+    WHERE cong_thuc.user_id = ?
+    GROUP BY cong_thuc.id
+    ORDER BY cong_thuc.created_at DESC
+  `, [user_id], (err, result) => {
+    if (err)
+      return res.status(500).json({ message: "❌ Lỗi khi lấy công thức của tôi!" });
+    res.json(result);
+  });
+});
+
+// ✅ API lấy công thức theo user ID (pagination + stats)
+router.get("/author/:userId", (req, res) => {
+  const userId = req.params.userId;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 8;
+  const offset = (page - 1) * limit;
+
   db.query(
-    "SELECT * FROM cong_thuc WHERE user_id = ? ORDER BY created_at DESC",
-    [user_id],
-    (err, result) => {
-      if (err)
-        return res.status(500).json({ message: "❌ Lỗi khi lấy công thức của tôi!" });
-      res.json(result);
+    "SELECT COUNT(*) as total FROM cong_thuc WHERE user_id = ?",
+    [userId],
+    (err, countResult) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi đếm công thức!" });
+
+      const total = countResult[0].total;
+
+      db.query(`
+        SELECT 
+          cong_thuc.*,
+          nguoi_dung.username,
+          nguoi_dung.avatar_url,
+          COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+          COUNT(DISTINCT danh_gia.id) as rating_count,
+          COUNT(DISTINCT favorite.id) as favorite_count
+        FROM cong_thuc 
+        JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+        LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+        LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+        WHERE cong_thuc.user_id = ?
+        GROUP BY cong_thuc.id
+        ORDER BY cong_thuc.created_at DESC 
+        LIMIT ? OFFSET ?
+      `, [userId, limit, offset], (err, result) => {
+        if (err) return res.status(500).json({ message: "❌ Lỗi lấy công thức!" });
+        res.json({ data: result, page, limit, total });
+      });
     }
   );
 });
@@ -233,7 +478,7 @@ router.put("/update/:id", verifyToken, upload.single("image"), async (req, res) 
           const newName = req.file.filename + ext;
           const target = path.join(__dirname, "..", "uploads", newName);
           fs.renameSync(req.file.path, target);
-          newImageUrl = `${req.protocol}://${req.get("host")}/uploads/${newName}`;
+          newImageUrl = `http://localhost:3001/uploads/${newName}`;
         } catch (localErr) {
           console.warn("⚠️  Local fallback failed on update:", localErr.message);
           try { fs.unlinkSync(req.file.path); } catch(e){}
@@ -275,6 +520,19 @@ router.delete("/delete/:id", verifyToken, (req, res) => {
         return res.status(403).json({ message: "❌ Bạn không có quyền xóa công thức này!" });
 
       res.json({ message: "✅ Xóa công thức thành công!" });
+    }
+  );
+});
+
+// ✅ API view counter
+router.post("/view/:id", (req, res) => {
+  const recipeId = req.params.id;
+  db.query(
+    "UPDATE cong_thuc SET views = views + 1 WHERE id = ?",
+    [recipeId],
+    (err) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi cập nhật view!" });
+      res.json({ message: "✅ View count updated" });
     }
   );
 });

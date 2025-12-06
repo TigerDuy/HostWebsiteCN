@@ -25,7 +25,7 @@ function MyRecipes() {
 
   const fetchRecipes = async (token) => {
     try {
-      const res = await axios.get("http://localhost:3002/recipe/my", {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/my`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRecipes(res.data);
@@ -43,7 +43,7 @@ function MyRecipes() {
     if (!window.confirm("❓ Bạn có chắc muốn xóa công thức này?")) return;
 
     try {
-      await axios.delete(`http://localhost:3002/recipe/delete/${id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -52,15 +52,6 @@ function MyRecipes() {
     } catch (err) {
       alert("❌ Lỗi xóa công thức!");
     }
-  };
-
-  const startEdit = (recipe) => {
-    setEditingId(recipe.id);
-    setEditForm({
-      title: recipe.title,
-      ingredients: recipe.ingredients,
-      steps: recipe.steps,
-    });
   };
 
   const handleUpdate = async () => {
@@ -73,7 +64,7 @@ function MyRecipes() {
 
     try {
       await axios.put(
-        `http://localhost:3002/recipe/update/${editingId}`,
+        `http://localhost:3001/recipe/update/${editingId}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );

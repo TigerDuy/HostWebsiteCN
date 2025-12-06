@@ -43,7 +43,7 @@ function Register() {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/register`, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/register`, {
         username,
         email,
         password,

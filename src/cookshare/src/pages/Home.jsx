@@ -16,7 +16,7 @@ function Home() {
 
   const fetchRecipes = async () => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/list`);
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/list`);
       setRecipes(res.data);
     } catch (err) {
       console.error("❌ Lỗi lấy công thức:", err);

@@ -20,7 +20,7 @@ export default function UserRecipes({ authorId }) {
   const fetch = async (p = 1) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/author/${authorId}?page=${p}&limit=${limit}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/author/${authorId}?page=${p}&limit=${limit}`);
       if (p === 1) {
         setRecipes(res.data.data || []);
       } else {
@@ -64,7 +64,7 @@ export default function UserRecipes({ authorId }) {
               )}
               <div className="meta">
                 <Link to={`/recipe/${r.id}`}>{r.title}</Link>
-                <div className="small-meta">⭐ {r.avg_rating ? Number(r.avg_rating).toFixed(1) : '—'} • 👁️ {r.views || 0}</div>
+                <div className="small-meta">⭐ {r.avg_rating ? Number(r.avg_rating).toFixed(1) : '—'} • 👁️ {r.views || 0} • ❤️ {r.favorite_count || 0}</div>
               </div>
             </div>
           ))}

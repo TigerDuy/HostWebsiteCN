@@ -47,12 +47,12 @@ function Profile() {
     fetchCounts();
     fetchFollowers(1);
     fetchFollowing(1);
-  }, [token, navigate]);
+  }, [token, navigate, userId]);
 
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
@@ -74,8 +74,10 @@ function Profile() {
 
   const fetchCounts = async () => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/counts/${userId}`);
-      setCounts(res.data || { followers: 0, following: 0 });
+      // TODO: Implement follow system
+      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/counts/${userId}`);
+      // setCounts(res.data || { followers: 0, following: 0 });
+      setCounts({ followers: 0, following: 0 });
     } catch (err) {
       // ignore
     }
@@ -83,15 +85,19 @@ function Profile() {
 
   const fetchFollowers = async (page = 1) => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/followers/${userId}?page=${page}&limit=${followers.limit}`);
-      setFollowers(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      // TODO: Implement follow system
+      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/followers/${userId}?page=${page}&limit=${followers.limit}`);
+      // setFollowers(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      setFollowers({ data: [], page: 1, total: 0, limit: 10 });
     } catch (err) {}
   };
 
   const fetchFollowing = async (page = 1) => {
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/following/${userId}?page=${page}&limit=${following.limit}`);
-      setFollowing(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      // TODO: Implement follow system
+      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/following/${userId}?page=${page}&limit=${following.limit}`);
+      // setFollowing(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      setFollowing({ data: [], page: 1, total: 0, limit: 10 });
     } catch (err) {}
   };
 
@@ -157,7 +163,7 @@ function Profile() {
       const fd = new FormData();
       fd.append('avatar', fileToUpload);
 
-      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}/avatar`, fd, {
+      const res = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}/avatar`, fd, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
       });
       // update avatar preview
@@ -187,7 +193,7 @@ function Profile() {
     try {
       setIsSaving(true);
       const res = await axios.put(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/profile/${userId}`,
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}`,
         {
           username: formData.username,
           email: formData.email,
@@ -237,7 +243,7 @@ function Profile() {
     try {
       setIsSaving(true);
       await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/auth/change-password/${userId}`,
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/change-password/${userId}`,
         {
           currentPassword: formData.currentPassword,
           newPassword: formData.newPassword

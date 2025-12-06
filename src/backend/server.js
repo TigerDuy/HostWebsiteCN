@@ -34,6 +34,10 @@ app.use("/favorite", favoriteRoutes);
 const ratingRoutes = require("./routes/rating");
 app.use("/rating", ratingRoutes);
 
+// ✅ Thêm route theo dõi (Follow)
+const followRoutes = require("./routes/follow");
+app.use("/follow", followRoutes);
+
 // ✅ Start server
 app.listen(3001, () => {
   console.log("✅ Backend đang chạy tại http://localhost:3001");

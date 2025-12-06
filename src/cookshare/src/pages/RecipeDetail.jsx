@@ -8,6 +8,12 @@ function RecipeDetail() {
   const navigate = useNavigate();
   const [recipe, setRecipe] = useState({});
   const [comments, setComments] = useState([]);
+  const [nestedComments, setNestedComments] = useState([]);
+  const [sortComments, setSortComments] = useState("latest");
+  const [replyTargetId, setReplyTargetId] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [editCommentId, setEditCommentId] = useState(null);
+  const [editCommentText, setEditCommentText] = useState("");
   const [stats, setStats] = useState({
     averageRating: 0,
     totalRatings: 0,
@@ -22,24 +28,26 @@ function RecipeDetail() {
   const fetchRecipeData = useCallback(async () => {
     try {
       const recipeRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/detail/${id}`
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/detail/${id}`
       );
       setRecipe(recipeRes.data);
 
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const commentsRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/comment/${id}`
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${id}?sort=${sortComments}`,
+        { headers }
       );
       setComments(commentsRes.data);
 
       const statsRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/rating/stats/${id}`
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/stats/${id}`
       );
       setStats(statsRes.data);
 
-      const token = localStorage.getItem("token");
       if (token) {
         const userRatingRes = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/rating/user/${id}`,
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/user/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (userRatingRes.data.hasRated) {
@@ -52,14 +60,43 @@ function RecipeDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, sortComments]);
+
+  // Build nested comments: sort is applied only to root-level, replies always sorted by time
+  useEffect(() => {
+    const map = {};
+    const roots = [];
+    
+    // Build map
+    comments.forEach((c) => {
+      map[c.id] = { ...c, replies: [] };
+    });
+    
+    // Nest replies under parents
+    comments.forEach((c) => {
+      if (c.parent_id) {
+        if (map[c.parent_id]) map[c.parent_id].replies.push(map[c.id]);
+      } else {
+        roots.push(map[c.id]);
+      }
+    });
+    
+    // Sort replies by created_at ASC (oldest first = chronological order)
+    Object.values(map).forEach(comment => {
+      if (comment.replies.length > 0) {
+        comment.replies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      }
+    });
+    
+    setNestedComments(roots);
+  }, [comments]);
 
   const checkFavorite = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/favorite/check/${id}`,
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/check/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsFavorited(res.data.isFavorited);
@@ -74,7 +111,7 @@ function RecipeDetail() {
     if (token && recipe.user_id) {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/is-following/${recipe.user_id}`,
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/is-following/${recipe.user_id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsFollowing(res.data.isFollowing);
@@ -97,7 +134,7 @@ function RecipeDetail() {
   useEffect(() => {
     if (!recipe?.id) return;
     const controller = new AbortController();
-    fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
+    fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && data.updated) {
@@ -118,14 +155,14 @@ function RecipeDetail() {
 
     try {
       if (isFavorited) {
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/favorite/${id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Đã hủy yêu thích!");
         setIsFavorited(false);
       } else {
         await axios.post(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/favorite/${id}`,
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${id}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -148,7 +185,7 @@ function RecipeDetail() {
 
     try {
       await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/rating/${id}`,
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/${id}`,
         { rating },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -177,7 +214,7 @@ function RecipeDetail() {
 
     try {
       await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/comment`,
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment`,
         { recipe_id: id, comment: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -188,6 +225,125 @@ function RecipeDetail() {
     } catch (err) {
       alert("❌ Lỗi gửi bình luận!");
     }
+  };
+
+  const handleReplyClick = (parentId) => {
+    setReplyTargetId(parentId);
+    setReplyText("");
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyTargetId) return;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("❌ Bạn cần đăng nhập để trả lời!");
+      navigate("/login");
+      return;
+    }
+    if (!replyText.trim()) {
+      alert("❌ Vui lòng nhập nội dung trả lời!");
+      return;
+    }
+    try {
+      await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment`,
+        { recipe_id: id, comment: replyText, parent_id: replyTargetId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Đã trả lời bình luận!");
+      setReplyText("");
+      setReplyTargetId(null);
+      fetchRecipeData();
+    } catch (err) {
+      alert("❌ Lỗi khi trả lời!");
+    }
+  };
+
+  const handleCancelReply = () => {
+    setReplyText("");
+    setReplyTargetId(null);
+  };
+
+  const handleLikeComment = async (commentId) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("❌ Bạn cần đăng nhập để thích bình luận!");
+      navigate("/login");
+      return;
+    }
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // optimistic refresh
+      const liked = res.data.liked;
+      setComments((prev) => prev.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + (liked ? 1 : -1), is_liked: liked } : c));
+    } catch (err) {
+      alert("❌ Lỗi khi thích bình luận!");
+    }
+  };
+
+  const handleEditComment = (commentId, currentText) => {
+    setEditCommentId(commentId);
+    setEditCommentText(currentText);
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!editCommentId) return;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("❌ Bạn cần đăng nhập!");
+      navigate("/login");
+      return;
+    }
+    if (!editCommentText.trim()) {
+      alert("❌ Bình luận không được để trống!");
+      return;
+    }
+
+    try {
+      await axios.put(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${editCommentId}`,
+        { comment: editCommentText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Cập nhật bình luận thành công!");
+      setEditCommentId(null);
+      setEditCommentText("");
+      fetchRecipeData();
+    } catch (err) {
+      alert("❌ Lỗi cập nhật bình luận!");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditCommentId(null);
+    setEditCommentText("");
+  };
+
+  const handleDeleteComment = (commentId) => {
+    if (!window.confirm("❌ Bạn chắc chắn muốn xóa bình luận?")) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("❌ Bạn cần đăng nhập!");
+      navigate("/login");
+      return;
+    }
+
+    axios.delete(
+      `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    .then(() => {
+      alert("✅ Xóa bình luận thành công!");
+      fetchRecipeData();
+    })
+    .catch(() => {
+      alert("❌ Lỗi xóa bình luận!");
+    });
   };
 
   const handleFollow = async () => {
@@ -201,14 +357,14 @@ function RecipeDetail() {
 
     try {
       if (isFollowing) {
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/${recipe.user_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${recipe.user_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Đã hủy theo dõi!");
         setIsFollowing(false);
       } else {
         await axios.post(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/follow/${recipe.user_id}`,
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${recipe.user_id}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -360,14 +516,139 @@ function RecipeDetail() {
 
       {/* BÌNH LUẬN */}
       <div className="comment-box">
-        <h3>💬 Bình Luận ({comments.length})</h3>
+        <div className="comment-box-header">
+          <h3>💬 Bình Luận ({comments.length})</h3>
+          <div className="comment-sort-row">
+            <label>Sắp xếp: </label>
+            <select value={sortComments} onChange={(e) => setSortComments(e.target.value)}>
+              <option value="latest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="top">Được thích nhiều nhất</option>
+            </select>
+          </div>
+        </div>
 
-        {comments.length > 0 ? (
+        {nestedComments.length > 0 ? (
           <ul className="comments-list">
-            {comments.map((c) => (
+            {nestedComments.map((c) => (
               <li key={c.id} className="comment-item">
-                <b className="comment-author">{c.username}</b>
+                <div className="comment-header">
+                  <div className="comment-author-info">
+                    {c.avatar_url ? (
+                      <img src={c.avatar_url} alt={c.username} className="comment-avatar" />
+                    ) : (
+                      <div className="comment-avatar-placeholder">{(c.username || 'U').charAt(0).toUpperCase()}</div>
+                    )}
+                    <div className="comment-author-details">
+                      <b className="comment-author">{c.username}</b>
+                      <span className="comment-time">{new Date(c.created_at).toLocaleString('vi-VN')}</span>
+                    </div>
+                  </div>
+                  <div className="comment-actions">
+                    <button className={`btn-like-comment ${c.is_liked ? 'liked' : ''}`} onClick={() => handleLikeComment(c.id)}>❤️ {c.like_count || 0}</button>
+                    <button className="btn-reply-comment" onClick={() => handleReplyClick(c.id)}>↩️</button>
+                    {parseInt(localStorage.getItem('userId'), 10) === c.user_id && (
+                      <>
+                        <button className="btn-edit-comment" onClick={() => handleEditComment(c.id, c.comment)}>✏️</button>
+                        <button className="btn-delete-comment" onClick={() => handleDeleteComment(c.id)}>🗑️</button>
+                      </>
+                    )}
+                  </div>
+                </div>
                 <p className="comment-text">{c.comment}</p>
+
+                {editCommentId === c.id ? (
+                  <div className="reply-box">
+                    <textarea
+                      value={editCommentText}
+                      onChange={(e) => setEditCommentText(e.target.value)}
+                      placeholder="Chỉnh sửa bình luận..."
+                      rows="3"
+                    />
+                    <div className="reply-actions">
+                      <button className="btn-comment" onClick={handleSubmitEdit}>Lưu</button>
+                      <button className="btn-delete-comment" onClick={handleCancelEdit}>Hủy</button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {replyTargetId === c.id && (
+                  <div className="reply-box">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Nhập trả lời của bạn..."
+                      rows="3"
+                    />
+                    <div className="reply-actions">
+                      <button className="btn-comment" onClick={handleSubmitReply}>Gửi</button>
+                      <button className="btn-delete-comment" onClick={handleCancelReply}>Hủy</button>
+                    </div>
+                  </div>
+                )}
+
+                {c.replies && c.replies.length > 0 && (
+                  <ul className="comment-replies">
+                    {c.replies.map((r) => (
+                      <li key={r.id} className="comment-item reply">
+                        <div className="comment-header">
+                          <div className="comment-author-info">
+                            {r.avatar_url ? (
+                              <img src={r.avatar_url} alt={r.username} className="comment-avatar" />
+                            ) : (
+                              <div className="comment-avatar-placeholder">{(r.username || 'U').charAt(0).toUpperCase()}</div>
+                            )}
+                            <div className="comment-author-details">
+                              <b className="comment-author">{r.username}</b>
+                              <span className="comment-time">{new Date(r.created_at).toLocaleString('vi-VN')}</span>
+                            </div>
+                          </div>
+                          <div className="comment-actions">
+                            <button className={`btn-like-comment ${r.is_liked ? 'liked' : ''}`} onClick={() => handleLikeComment(r.id)}>❤️ {r.like_count || 0}</button>
+                            <button className="btn-reply-comment" onClick={() => handleReplyClick(r.id)}>↩️</button>
+                            {parseInt(localStorage.getItem('userId'), 10) === r.user_id && (
+                              <>
+                                <button className="btn-edit-comment" onClick={() => handleEditComment(r.id, r.comment)}>✏️</button>
+                                <button className="btn-delete-comment" onClick={() => handleDeleteComment(r.id)}>🗑️</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <p className="comment-text">{r.comment}</p>
+
+                        {editCommentId === r.id ? (
+                          <div className="reply-box">
+                            <textarea
+                              value={editCommentText}
+                              onChange={(e) => setEditCommentText(e.target.value)}
+                              placeholder="Chỉnh sửa bình luận..."
+                              rows="3"
+                            />
+                            <div className="reply-actions">
+                              <button className="btn-comment" onClick={handleSubmitEdit}>Lưu</button>
+                              <button className="btn-delete-comment" onClick={handleCancelEdit}>Hủy</button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {replyTargetId === r.id && (
+                          <div className="reply-box">
+                            <textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Nhập trả lời của bạn..."
+                              rows="3"
+                            />
+                            <div className="reply-actions">
+                              <button className="btn-comment" onClick={handleSubmitReply}>Gửi</button>
+                              <button className="btn-delete-comment" onClick={handleCancelReply}>Hủy</button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

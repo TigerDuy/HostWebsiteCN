@@ -25,7 +25,7 @@ function FavoriteRecipes() {
     }
 
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/favorite/list`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/list`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRecipes(res.data);
@@ -45,7 +45,7 @@ function FavoriteRecipes() {
     }
 
     try {
-      await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/favorite/${recipeId}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${recipeId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("✅ Đã hủy yêu thích!");

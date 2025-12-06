@@ -28,7 +28,7 @@ function EditRecipe() {
 
     const fetchRecipe = async () => {
       try {
-        const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/detail/${id}`, {
+        const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/detail/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const r = res.data;
@@ -136,7 +136,7 @@ function EditRecipe() {
 
     try {
       setLoading(true);
-      await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3002'}/recipe/update/${id}`, formData, {
+      await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/update/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
       alert("✅ Cập nhật công thức thành công!");
