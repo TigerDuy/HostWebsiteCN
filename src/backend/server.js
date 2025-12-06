@@ -20,13 +20,9 @@ app.use("/auth", authRoutes);
 const recipeRoutes = require("./routes/recipe");
 app.use("/recipe", recipeRoutes);
 
-const debugRoutes = require('./routes/debug');
-app.use('/', debugRoutes);
-
 const adminRoutes = require("./routes/admin");
 app.use("/admin", adminRoutes);
 
-// ✅ Thêm route yêu thích (Favorite)
 const favoriteRoutes = require("./routes/favorite");
 app.use("/favorite", favoriteRoutes);
 
