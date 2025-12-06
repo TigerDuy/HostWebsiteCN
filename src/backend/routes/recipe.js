@@ -147,10 +147,10 @@ router.get("/search", (req, res) => {
     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
-    WHERE cong_thuc.title LIKE ?
+    WHERE cong_thuc.title LIKE ? OR nguoi_dung.username LIKE ?
     GROUP BY cong_thuc.id
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
-  `, [`%${q}%`], (err, result) => {
+  `, [`%${q}%`, `%${q}%`], (err, result) => {
     if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
     res.json(result);
   });
