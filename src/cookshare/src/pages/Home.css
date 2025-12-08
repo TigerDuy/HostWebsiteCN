@@ -39,6 +39,19 @@
   font-weight: bold;
 }
 
+.search-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-logo {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 50px;
+}
+
 .search-form {
   display: flex;
   gap: 10px;
