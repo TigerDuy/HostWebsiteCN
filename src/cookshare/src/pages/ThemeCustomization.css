@@ -2,7 +2,8 @@
 .theme-customization-container {
   min-height: calc(100vh - 80px);
   padding: 40px 20px;
-  background: var(--bg-light);
+  background: var(--bg-light);  
+  background: none !important;
 }
 
 .theme-content {

@@ -18,8 +18,12 @@ import Search from "./pages/Search";
 import FavoriteRecipes from "./pages/FavoriteRecipes";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EditRecipe from "./pages/EditRecipe";
+import { useThemeLoader } from "./hooks/useThemeLoader";
 
 function App() {
+  // Load theme on app startup
+  useThemeLoader();
+  
   return (
     <BrowserRouter>
       <Navbar />

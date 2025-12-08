@@ -1,0 +1,443 @@
+/* Global dark mode styles - comprehensive coverage */
+
+body.dark-mode {
+  background-color: #1a1a1a !important;
+  color: #e8e8e8 !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Universal selector to ensure all text is visible */
+body.dark-mode * {
+  color: #e8e8e8 !important;
+}
+
+/* Override buttons to maintain color */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"],
+body.dark-mode input[type="reset"] {
+  background-color: var(--primary-color, #ff7f50) !important;
+  color: white !important;
+  border-color: var(--primary-color, #ff7f50) !important;
+}
+
+/* Main containers */
+body.dark-mode .home-container,
+body.dark-mode .my-recipes-container,
+body.dark-mode .create-recipe-container,
+body.dark-mode .profile-container,
+body.dark-mode .admin-container,
+body.dark-mode .container,
+body.dark-mode .page-container,
+body.dark-mode .detail-container,
+body.dark-mode .favorite-recipes-container,
+body.dark-mode .search-container {
+  background-color: #1a1a1a80 !important;
+  color: #e8e8e8 !important;
+}
+
+/* Page titles */
+body.dark-mode .search-header h2,
+body.dark-mode .page-header h2 {
+  color: var(--primary-color, #ff7f50) !important;
+}
+
+body.dark-mode .create-recipe-content h1,
+body.dark-mode .my-recipes-container h1,
+body.dark-mode .admin-container h1,
+body.dark-mode .profile-container h1,
+body.dark-mode .detail-container h1,
+body.dark-mode .page-title {
+  color: var(--primary-color, #ff7f50) !important;
+}
+
+/* Cards and sections */
+body.dark-mode .recipe-item,
+body.dark-mode .create-form,
+body.dark-mode .recipe-card,
+body.dark-mode .profile-section,
+body.dark-mode .admin-section,
+body.dark-mode .form-group,
+body.dark-mode .card,
+body.dark-mode .panel,
+body.dark-mode .recipe-row,
+body.dark-mode .recipe-grid,
+body.dark-mode .comment,
+body.dark-mode .review,
+body.dark-mode .rating-section {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+  border-color: #444444 !important;
+}
+
+/* Input fields */
+body.dark-mode input[type="text"],
+body.dark-mode input[type="email"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="date"],
+body.dark-mode input[type="time"],
+body.dark-mode input[type="search"],
+body.dark-mode input[type="tel"],
+body.dark-mode input[type="url"],
+body.dark-mode textarea,
+body.dark-mode select {
+  background-color: #333333 !important;
+  color: #e8e8e8 !important;
+  border-color: #555555 !important;
+  caret-color: #e8e8e8 !important;
+}
+
+body.dark-mode input[type="text"]::placeholder,
+body.dark-mode input[type="email"]::placeholder,
+body.dark-mode input[type="password"]::placeholder,
+body.dark-mode input[type="number"]::placeholder,
+body.dark-mode input[type="date"]::placeholder,
+body.dark-mode input[type="time"]::placeholder,
+body.dark-mode input[type="search"]::placeholder,
+body.dark-mode input[type="tel"]::placeholder,
+body.dark-mode input[type="url"]::placeholder,
+body.dark-mode textarea::placeholder {
+  color: #b0b0b0 !important;
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+  background-color: #333333 !important;
+  color: #e8e8e8 !important;
+  border-color: var(--primary-color, #ff7f50) !important;
+}
+
+/* Labels and text elements */
+body.dark-mode label,
+body.dark-mode .form-label,
+body.dark-mode .label,
+body.dark-mode .section-title,
+body.dark-mode .title,
+body.dark-mode .heading {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode p,
+body.dark-mode span,
+body.dark-mode li,
+body.dark-mode div,
+body.dark-mode td,
+body.dark-mode th,
+body.dark-mode text,
+body.dark-mode small,
+body.dark-mode strong,
+body.dark-mode em,
+body.dark-mode i,
+body.dark-mode b {
+  color: #e8e8e8 !important;
+}
+
+/* Links */
+body.dark-mode a {
+  color: #ffb366 !important;
+  text-decoration: none;
+}
+
+body.dark-mode a:visited {
+  color: #ff9944 !important;
+}
+
+body.dark-mode a:hover {
+  color: #ffd699 !important;
+}
+
+/* Button variants */
+body.dark-mode .btn:hover,
+body.dark-mode button:hover {
+  background-color: var(--secondary-color, #ff6347) !important;
+}
+
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .btn-success,
+body.dark-mode .btn-danger,
+body.dark-mode .btn-warning,
+body.dark-mode .btn-info {
+  background-color: var(--primary-color, #ff7f50) !important;
+  color: white !important;
+}
+
+/* Messages and alerts */
+body.dark-mode .error-message,
+body.dark-mode .alert-danger {
+  background-color: #4a1f1f !important;
+  border-left-color: #ff6b6b !important;
+  border-color: #444444 !important;
+  color: #ffdddd !important;
+}
+
+body.dark-mode .success-message,
+body.dark-mode .alert-success {
+  background-color: #1f4a2f !important;
+  border-color: #4a9d6f !important;
+  color: #ddffdd !important;
+}
+
+body.dark-mode .warning-message,
+body.dark-mode .alert-warning {
+  background-color: #4a4a1f !important;
+  border-color: #9d9d4a !important;
+  color: #ffffdd !important;
+}
+
+body.dark-mode .info-message,
+body.dark-mode .alert-info {
+  background-color: #1f3a4a !important;
+  border-color: #4a7d9d !important;
+  color: #ddffff !important;
+}
+
+/* Tables */
+body.dark-mode table {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode table thead {
+  background-color: #333333 !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode table thead th {
+  color: #e8e8e8 !important;
+  border-color: #444444 !important;
+  background-color: #333333 !important;
+}
+
+body.dark-mode table tbody tr {
+  border-bottom-color: #444444 !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode table tbody tr td {
+  color: #e8e8e8 !important;
+  border-color: #444444 !important;
+}
+
+body.dark-mode table tbody tr:hover {
+  background-color: #3a3a3a !important;
+}
+
+/* Dropdowns and modals */
+body.dark-mode .modal,
+body.dark-mode .dropdown-menu,
+body.dark-mode .popover,
+body.dark-mode .tooltip,
+body.dark-mode .dropdown-menu {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+  border-color: #444444 !important;
+}
+
+body.dark-mode .modal-header,
+body.dark-mode .dropdown-header {
+  background-color: #333333 !important;
+  border-color: #444444 !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .modal-body {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .modal-footer {
+  background-color: #333333 !important;
+  border-color: #444444 !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .dropdown-item {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .dropdown-item:hover,
+body.dark-mode .dropdown-item:focus {
+  background-color: #3a3a3a !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .dropdown-divider {
+  border-color: #444444 !important;
+}
+
+/* Navbar */
+body.dark-mode .navbar {
+  background: linear-gradient(135deg, var(--primary-color, #ff7f50) 0%, var(--secondary-color, #ff6347) 100%) !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .navbar h2,
+body.dark-mode .navbar h3,
+body.dark-mode .navbar a,
+body.dark-mode .navbar button,
+body.dark-mode .navbar span,
+body.dark-mode .navbar-brand {
+  color: #ffffff !important;
+}
+
+/* Forms and inputs */
+body.dark-mode .form-section label,
+body.dark-mode .form-section span {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .recipe-title,
+body.dark-mode .recipe-description,
+body.dark-mode .recipe-card-title {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .recipe-card-text,
+body.dark-mode .recipe-meta {
+  color: #b0b0b0 !important;
+}
+
+/* Statistics */
+body.dark-mode .stat-number,
+body.dark-mode .stat-value,
+body.dark-mode .stat-label {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .stat-card {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+  border-color: #444444 !important;
+}
+
+/* Progress bars */
+body.dark-mode .progress {
+  background-color: #333333 !important;
+}
+
+body.dark-mode .progress-bar {
+  background-color: var(--primary-color, #ff7f50) !important;
+}
+
+/* User info and profile */
+body.dark-mode .user-info,
+body.dark-mode .info-row,
+body.dark-mode .user-details {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .info-row label {
+  color: #b0b0b0 !important;
+}
+
+body.dark-mode .settings-header {
+  color: #e8e8e8 !important;
+}
+
+/* Navigation and sidebars */
+body.dark-mode .sidebar,
+body.dark-mode .nav,
+body.dark-mode .navigation {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .nav-item,
+body.dark-mode .nav-link {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .nav-item:hover,
+body.dark-mode .nav-link:hover {
+  background-color: #3a3a3a !important;
+  color: #ffffff !important;
+}
+
+/* Badges and tags */
+body.dark-mode .badge,
+body.dark-mode .tag,
+body.dark-mode .label-badge {
+  background-color: var(--primary-color, #ff7f50) !important;
+  color: white !important;
+}
+
+/* Borders and dividers */
+body.dark-mode hr,
+body.dark-mode .divider {
+  border-color: #444444 !important;
+}
+
+/* Recipe detail specific */
+body.dark-mode .detail-title,
+body.dark-mode .detail-container h2,
+body.dark-mode .detail-container h3 {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .detail-meta,
+body.dark-mode .detail-info {
+  color: #b0b0b0 !important;
+}
+
+/* Ratings and stars */
+body.dark-mode .rating,
+body.dark-mode .stars,
+body.dark-mode .rating-text {
+  color: #e8e8e8 !important;
+}
+
+/* Comments and reviews */
+body.dark-mode .comment-text,
+body.dark-mode .review-text,
+body.dark-mode .comment-author,
+body.dark-mode .review-author {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .comment-date,
+body.dark-mode .review-date {
+  color: #b0b0b0 !important;
+}
+
+/* Buttons in specific contexts */
+body.dark-mode .btn-edit,
+body.dark-mode .btn-delete,
+body.dark-mode .btn-save,
+body.dark-mode .btn-cancel {
+  background-color: var(--primary-color, #ff7f50) !important;
+  color: white !important;
+}
+
+/* Empty states */
+body.dark-mode .empty-state,
+body.dark-mode .no-data {
+  background-color: #2a2a2a00 !important;
+  color: #b0b0b0 !important;
+}
+
+/* Breadcrumb */
+body.dark-mode .breadcrumb {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .breadcrumb-item {
+  color: #e8e8e8 !important;
+}
+
+body.dark-mode .breadcrumb-item.active {
+  color: var(--primary-color, #ff7f50) !important;
+}

@@ -89,7 +89,7 @@ function AdminDashboard() {
 
   return (
     <div className="admin-container">
-      <h1>⚙️ Trang Quản Trị Admin</h1>
+      <h1 className="page-title">⚙️ Trang Quản Trị Admin</h1>
 
       {/* THỐNG KÊ */}
       <div className="admin-stats">

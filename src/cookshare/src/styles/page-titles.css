@@ -1,0 +1,21 @@
+/* Global page title styles using primary color from theme */
+
+.page-title {
+  color: var(--primary-color, #ff7f50) !important;
+  transition: color 0.3s ease;
+}
+
+/* Apply to all page titles */
+h1.page-title,
+h2.page-title {
+  color: var(--primary-color, #ff7f50) !important;
+}
+
+/* Specific overrides for different pages */
+.search-title.page-title {
+  color: var(--primary-color, #ff7f50) !important;
+}
+
+.theme-title.page-title {
+  color: var(--primary-color, #ff7f50) !important;
+}

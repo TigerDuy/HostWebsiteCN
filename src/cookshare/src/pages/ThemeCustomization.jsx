@@ -3,39 +3,24 @@ import './ThemeCustomization.css';
 
 function ThemeCustomization() {
   const [primaryColor, setPrimaryColor] = useState('#ff7f50');
-  const [theme, setTheme] = useState('light');
   const [backgroundImage, setBackgroundImage] = useState('');
   const [backgroundPreview, setBackgroundPreview] = useState('');
 
   useEffect(() => {
     // Load saved settings
     const savedColor = localStorage.getItem('primaryColor') || '#ff7f50';
-    const savedTheme = localStorage.getItem('theme') || 'light';
     const savedBg = localStorage.getItem('backgroundImage') || '';
     
     setPrimaryColor(savedColor);
-    setTheme(savedTheme);
     setBackgroundImage(savedBg);
     setBackgroundPreview(savedBg);
     
-    applyTheme(savedColor, savedTheme, savedBg);
+    applyTheme(savedColor, savedBg);
   }, []);
 
-  const applyTheme = (color, mode, bgImage) => {
+  const applyTheme = (color, bgImage) => {
     document.documentElement.style.setProperty('--primary-color', color);
     document.documentElement.style.setProperty('--secondary-color', adjustColor(color, -20));
-    
-    if (mode === 'dark') {
-      document.documentElement.style.setProperty('--bg-light', '#1a1a1a');
-      document.documentElement.style.setProperty('--text-dark', '#ffffff');
-      document.documentElement.style.setProperty('--text-light', '#cccccc');
-      document.body.classList.add('dark-mode');
-    } else {
-      document.documentElement.style.setProperty('--bg-light', '#fafafa');
-      document.documentElement.style.setProperty('--text-dark', '#333333');
-      document.documentElement.style.setProperty('--text-light', '#666666');
-      document.body.classList.remove('dark-mode');
-    }
     
     if (bgImage) {
       document.body.style.backgroundImage = `url(${bgImage})`;
@@ -58,13 +43,7 @@ function ThemeCustomization() {
   const handleColorChange = (e) => {
     const newColor = e.target.value;
     setPrimaryColor(newColor);
-    applyTheme(newColor, theme, backgroundImage);
-  };
-
-  const handleThemeChange = (e) => {
-    const newTheme = e.target.value;
-    setTheme(newTheme);
-    applyTheme(primaryColor, newTheme, backgroundImage);
+    applyTheme(newColor, backgroundImage);
   };
 
   const handleBackgroundUpload = (e) => {
@@ -75,7 +54,7 @@ function ThemeCustomization() {
         const dataUrl = reader.result;
         setBackgroundImage(dataUrl);
         setBackgroundPreview(dataUrl);
-        applyTheme(primaryColor, theme, dataUrl);
+        applyTheme(primaryColor, dataUrl);
       };
       reader.readAsDataURL(file);
     }
@@ -84,44 +63,40 @@ function ThemeCustomization() {
   const handleRemoveBackground = () => {
     setBackgroundImage('');
     setBackgroundPreview('');
-    applyTheme(primaryColor, theme, '');
+    applyTheme(primaryColor, '');
   };
 
   const handleSave = () => {
     localStorage.setItem('primaryColor', primaryColor);
-    localStorage.setItem('theme', theme);
     localStorage.setItem('backgroundImage', backgroundImage);
     alert('✅ Đã lưu cài đặt giao diện!');
   };
 
   const handleReset = () => {
     const defaultColor = '#ff7f50';
-    const defaultTheme = 'light';
     const defaultBg = '';
     
     setPrimaryColor(defaultColor);
-    setTheme(defaultTheme);
     setBackgroundImage(defaultBg);
     setBackgroundPreview(defaultBg);
     
     localStorage.removeItem('primaryColor');
-    localStorage.removeItem('theme');
     localStorage.removeItem('backgroundImage');
     
-    applyTheme(defaultColor, defaultTheme, defaultBg);
+    applyTheme(defaultColor, defaultBg);
     alert('✅ Đã khôi phục cài đặt mặc định!');
   };
 
   return (
     <div className="theme-customization-container">
       <div className="theme-content">
-        <h1 className="theme-title">🎨 Tùy Chỉnh Giao Diện</h1>
+        <h1 className="theme-title page-title">🎨 Tùy Chỉnh Giao Diện</h1>
 
         {/* Preview Section */}
         <div className="theme-preview-section">
           <h2>👁️ Xem Trước</h2>
           <div className="preview-box" style={{
-            backgroundColor: theme === 'dark' ? '#1a1a1a' : '#fafafa',
+            backgroundColor: '#fafafa',
             backgroundImage: backgroundPreview ? `url(${backgroundPreview})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center'
@@ -131,8 +106,8 @@ function ThemeCustomization() {
                 <span style={{ color: '#fff' }}>🍳 CookShare</span>
               </div>
               <div className="preview-content" style={{ 
-                color: theme === 'dark' ? '#fff' : '#333',
-                backgroundColor: theme === 'dark' ? 'rgba(26,26,26,0.9)' : 'rgba(255,255,255,0.9)'
+                color: '#333',
+                backgroundColor: 'rgba(255,255,255,0.9)'
               }}>
                 <h3 style={{ color: primaryColor }}>CookShare - Chia Sẻ Công Thức Nấu Ăn</h3>
                 <p>Đây là giao diện của bạn</p>
@@ -164,33 +139,6 @@ function ThemeCustomization() {
             <div className="color-preview" style={{ backgroundColor: primaryColor }}></div>
           </div>
           <p className="help-text">Màu này sẽ áp dụng cho navbar, nút bấm, tiêu đề và các phần tử chính</p>
-        </div>
-
-        {/* Theme Mode */}
-        <div className="theme-section">
-          <h2>🌓 Chế Độ Giao Diện</h2>
-          <div className="theme-mode-group">
-            <label className={`theme-mode-option ${theme === 'light' ? 'active' : ''}`}>
-              <input
-                type="radio"
-                name="theme"
-                value="light"
-                checked={theme === 'light'}
-                onChange={handleThemeChange}
-              />
-              <span>☀️ Sáng</span>
-            </label>
-            <label className={`theme-mode-option ${theme === 'dark' ? 'active' : ''}`}>
-              <input
-                type="radio"
-                name="theme"
-                value="dark"
-                checked={theme === 'dark'}
-                onChange={handleThemeChange}
-              />
-              <span>🌙 Tối</span>
-            </label>
-          </div>
         </div>
 
         {/* Background Image */}

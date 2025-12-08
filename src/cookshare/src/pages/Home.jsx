@@ -41,7 +41,7 @@ function Home() {
       {/* SEARCH SECTION */}
       <div className="home-search-section">
         <div className="search-header">
-          <h2 className="search-title">
+          <h2 className="search-title page-title">
             <img src="/logo.jpg" alt="CookShare logo" className="search-logo" />
             CookShare - Chia Sẻ Công Thức Nấu Ăn
           </h2>

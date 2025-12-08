@@ -5,6 +5,7 @@
   margin: 0 auto;
   padding: 0;
   background: #fafafa;
+  background: none !important;
   min-height: calc(100vh - 80px);
 }
 
