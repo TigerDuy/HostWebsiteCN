@@ -5,6 +5,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
 import AccountSettings from "./pages/AccountSettings";
 import UserProfile from "./pages/UserProfile";
+import ThemeSettings from "./pages/ThemeSettings";
+import ThemeCustomization from "./pages/ThemeCustomization";
 import Navbar from "./components/Navbar";
 // Sử dụng trang tạo công thức mới (CreateRecipe.jsx)
 import CreateRecipe from "./pages/CreateRecipe";
@@ -39,6 +41,8 @@ function App() {
         <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+        <Route path="/theme" element={<ProtectedRoute><ThemeSettings /></ProtectedRoute>} />
+        <Route path="/customize" element={<ProtectedRoute><ThemeCustomization /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>

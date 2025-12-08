@@ -468,6 +468,25 @@
   border-top: 1px solid #e0e0e0;
 }
 
+.btn-back {
+  padding: 11px 22px;
+  background: white;
+  border: 1px solid #2196F3;
+  border-radius: 3px;
+  color: #2196F3;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-right: auto;
+}
+
+.btn-back:hover {
+  background: #e3f2fd;
+  border-color: #1976D2;
+  color: #1976D2;
+}
+
 .btn-delete {
   padding: 11px 22px;
   background: white;

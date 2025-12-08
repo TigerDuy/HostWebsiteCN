@@ -153,6 +153,20 @@ function Navbar() {
                       </div>
                     </div>
                   </Link>
+                  <Link 
+                    to="/settings" 
+                    className="dropdown-item"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    ⚙️ Cài đặt tài khoản
+                  </Link>
+                  <Link 
+                    to="/customize" 
+                    className="dropdown-item"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    🎨 Tùy chỉnh giao diện
+                  </Link>
                   <button 
                     onClick={() => {
                       handleLogout();
