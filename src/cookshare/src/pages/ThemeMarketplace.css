@@ -1,0 +1,261 @@
+/* Theme Marketplace Page */
+.marketplace-container {
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+  background: var(--bg-light, #fafafa);
+}
+
+.marketplace-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.marketplace-title {
+  font-size: 32px;
+  color: var(--primary-color, #ff7f50);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.marketplace-subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 16px;
+}
+
+/* Loading State */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* No Themes */
+.no-themes {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  color: #999;
+}
+
+.no-themes p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Themes Grid */
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+/* Theme Card */
+.theme-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Theme Preview */
+.theme-preview {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  background: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-text {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Theme Info */
+.theme-info {
+  padding: 16px;
+  flex: 1;
+}
+
+.theme-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #333;
+  word-break: break-word;
+}
+
+.theme-color,
+.theme-author,
+.theme-date {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.theme-color {
+  font-weight: 500;
+  font-family: monospace;
+}
+
+/* Theme Actions */
+.theme-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eee;
+}
+
+.btn-apply,
+.btn-download {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-apply {
+  color: white;
+}
+
+.btn-apply:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 127, 80, 0.3);
+}
+
+.btn-download {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-download:hover {
+  background: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+/* Status Message */
+.status-message {
+  margin-bottom: 24px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  text-align: center;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark Mode */
+body.dark-mode .marketplace-container {
+  background: #1a1a1a;
+}
+
+body.dark-mode .marketplace-subtitle {
+  color: #ccc;
+}
+
+body.dark-mode .theme-card {
+  background: #2d2d2d;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .theme-info h3 {
+  color: #e8e8e8;
+}
+
+body.dark-mode .theme-color,
+body.dark-mode .theme-author,
+body.dark-mode .theme-date {
+  color: #aaa;
+}
+
+body.dark-mode .theme-actions {
+  border-top-color: #444;
+}
+
+body.dark-mode .no-themes {
+  background: #2d2d2d;
+  color: #666;
+}
+
+body.dark-mode .status-message {
+  background: #1e4620;
+  color: #a6d9ac;
+  border-color: #2d5a32;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .marketplace-container {
+    padding: 20px 10px;
+  }
+
+  .marketplace-title {
+    font-size: 24px;
+  }
+
+  .themes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .theme-preview {
+    height: 150px;
+  }
+
+  .btn-apply,
+  .btn-download {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}

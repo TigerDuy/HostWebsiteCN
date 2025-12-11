@@ -154,18 +154,18 @@ function Navbar() {
                     </div>
                   </Link>
                   <Link 
-                    to="/settings" 
-                    className="dropdown-item"
-                    onClick={() => setShowDropdown(false)}
-                  >
-                    ⚙️ Cài đặt tài khoản
-                  </Link>
-                  <Link 
                     to="/customize" 
                     className="dropdown-item"
                     onClick={() => setShowDropdown(false)}
                   >
                     🎨 Tùy chỉnh giao diện
+                  </Link>
+                  <Link 
+                    to="/theme-marketplace" 
+                    className="dropdown-item"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    🌐 Thị trường theme
                   </Link>
                   <button 
                     onClick={() => {

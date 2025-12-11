@@ -83,7 +83,7 @@ function MyRecipes() {
 
   return (
     <div className="my-recipes-container">
-      <h1>📖 Công Thức Của Tôi</h1>
+      <h1 className="page-title">📖 Công Thức Của Tôi</h1>
 
       {recipes.length > 0 ? (
         <div className="recipes-list">

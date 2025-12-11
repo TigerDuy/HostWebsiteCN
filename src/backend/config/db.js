@@ -7,6 +7,8 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "cookingdb",
   port: parseInt(process.env.DB_PORT, 10) || 3306,
+  connectTimeout: 10000,
+  multipleStatements: false
 });
 
 db.connect((err) => {
@@ -15,6 +17,14 @@ db.connect((err) => {
     return;
   }
   console.log("✅ Kết nối MySQL thành công!");
+  
+  // Verify columns exist
+  db.query('SHOW COLUMNS FROM cong_thuc', (err, result) => {
+    if (!err) {
+      const columns = result.map(r => r.Field);
+      console.log('📋 Cột trong bảng cong_thuc:', columns.join(', '));
+    }
+  });
 });
 
 module.exports = db;

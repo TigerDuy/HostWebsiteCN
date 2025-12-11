@@ -22,8 +22,20 @@ CREATE TABLE cong_thuc (
   ingredients LONGTEXT NOT NULL,
   steps LONGTEXT NOT NULL,
   image_url VARCHAR(500),
+  servings VARCHAR(100),
+  cook_time VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES nguoi_dung(id) ON DELETE CASCADE
+);
+
+-- ✅ BẢNG ẢNH CÁC BƯỚC
+CREATE TABLE step_images (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  recipe_id INT NOT NULL,
+  step_index INT NOT NULL,
+  image_url VARCHAR(500) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (recipe_id) REFERENCES cong_thuc(id) ON DELETE CASCADE
 );
 
 -- ✅ BẢNG BÌNH LUẬN

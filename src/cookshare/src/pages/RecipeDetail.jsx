@@ -1,19 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./RecipeDetail.css";
 
 function RecipeDetail() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = String(params.id || "");
   const navigate = useNavigate();
+  const viewCountedRef = useRef(false);
   const [recipe, setRecipe] = useState({});
   const [comments, setComments] = useState([]);
-  const [nestedComments, setNestedComments] = useState([]);
-  const [sortComments, setSortComments] = useState("latest");
-  const [replyTargetId, setReplyTargetId] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [editCommentId, setEditCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState("");
   const [stats, setStats] = useState({
     averageRating: 0,
     totalRatings: 0,
@@ -26,17 +22,15 @@ function RecipeDetail() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   const fetchRecipeData = useCallback(async () => {
+    if (!id) return;
     try {
       const recipeRes = await axios.get(
         `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/detail/${id}`
       );
       setRecipe(recipeRes.data);
 
-      const token = localStorage.getItem("token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const commentsRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${id}?sort=${sortComments}`,
-        { headers }
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${id}`
       );
       setComments(commentsRes.data);
 
@@ -45,6 +39,7 @@ function RecipeDetail() {
       );
       setStats(statsRes.data);
 
+      const token = localStorage.getItem("token");
       if (token) {
         const userRatingRes = await axios.get(
           `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/user/${id}`,
@@ -60,36 +55,7 @@ function RecipeDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id, sortComments]);
-
-  // Build nested comments: sort is applied only to root-level, replies always sorted by time
-  useEffect(() => {
-    const map = {};
-    const roots = [];
-    
-    // Build map
-    comments.forEach((c) => {
-      map[c.id] = { ...c, replies: [] };
-    });
-    
-    // Nest replies under parents
-    comments.forEach((c) => {
-      if (c.parent_id) {
-        if (map[c.parent_id]) map[c.parent_id].replies.push(map[c.id]);
-      } else {
-        roots.push(map[c.id]);
-      }
-    });
-    
-    // Sort replies by created_at ASC (oldest first = chronological order)
-    Object.values(map).forEach(comment => {
-      if (comment.replies.length > 0) {
-        comment.replies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      }
-    });
-    
-    setNestedComments(roots);
-  }, [comments]);
+  }, [id]);
 
   const checkFavorite = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -111,7 +77,8 @@ function RecipeDetail() {
     if (token && recipe.user_id) {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/is-following/${recipe.user_id}`,
+        // TODO: Follow endpoint chưa tạo
+        // `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/is-following/${recipe.user_id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsFollowing(res.data.isFollowing);
@@ -132,7 +99,8 @@ function RecipeDetail() {
 
   // Gọi tăng view đúng một lần sau khi recipe.id có dữ liệu
   useEffect(() => {
-    if (!recipe?.id) return;
+    if (!recipe?.id || viewCountedRef.current) return;
+    
     const controller = new AbortController();
     fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
@@ -140,8 +108,11 @@ function RecipeDetail() {
         if (data && data.updated) {
           setRecipe(prev => ({ ...prev, views: (Number(prev?.views || 0) + 1) }));
         }
+        viewCountedRef.current = true;
       })
-      .catch(() => {});
+      .catch(() => {
+        viewCountedRef.current = true;
+      });
     return () => controller.abort();
   }, [recipe?.id]);
   const handleFavorite = async () => {
@@ -227,100 +198,29 @@ function RecipeDetail() {
     }
   };
 
-  const handleReplyClick = (parentId) => {
-    setReplyTargetId(parentId);
-    setReplyText("");
-  };
-
-  const handleSubmitReply = async () => {
-    if (!replyTargetId) return;
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("❌ Bạn cần đăng nhập để trả lời!");
-      navigate("/login");
-      return;
-    }
-    if (!replyText.trim()) {
-      alert("❌ Vui lòng nhập nội dung trả lời!");
-      return;
-    }
-    try {
-      await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment`,
-        { recipe_id: id, comment: replyText, parent_id: replyTargetId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("✅ Đã trả lời bình luận!");
-      setReplyText("");
-      setReplyTargetId(null);
-      fetchRecipeData();
-    } catch (err) {
-      alert("❌ Lỗi khi trả lời!");
-    }
-  };
-
-  const handleCancelReply = () => {
-    setReplyText("");
-    setReplyTargetId(null);
-  };
-
-  const handleLikeComment = async (commentId) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("❌ Bạn cần đăng nhập để thích bình luận!");
-      navigate("/login");
-      return;
-    }
-    try {
-      const res = await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}/like`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // optimistic refresh
-      const liked = res.data.liked;
-      setComments((prev) => prev.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + (liked ? 1 : -1), is_liked: liked } : c));
-    } catch (err) {
-      alert("❌ Lỗi khi thích bình luận!");
-    }
-  };
-
   const handleEditComment = (commentId, currentText) => {
-    setEditCommentId(commentId);
-    setEditCommentText(currentText);
-  };
+    const newText = prompt("Chỉnh sửa bình luận:", currentText);
+    if (newText === null || newText.trim() === "") return;
 
-  const handleSubmitEdit = async () => {
-    if (!editCommentId) return;
     const token = localStorage.getItem("token");
     if (!token) {
       alert("❌ Bạn cần đăng nhập!");
       navigate("/login");
       return;
     }
-    if (!editCommentText.trim()) {
-      alert("❌ Bình luận không được để trống!");
-      return;
-    }
 
-    try {
-      await axios.put(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${editCommentId}`,
-        { comment: editCommentText },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    axios.put(
+      `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}`,
+      { comment: newText },
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    .then(() => {
       alert("✅ Cập nhật bình luận thành công!");
-      setEditCommentId(null);
-      setEditCommentText("");
       fetchRecipeData();
-    } catch (err) {
+    })
+    .catch(() => {
       alert("❌ Lỗi cập nhật bình luận!");
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditCommentId(null);
-    setEditCommentText("");
+    });
   };
 
   const handleDeleteComment = (commentId) => {
@@ -502,35 +402,59 @@ function RecipeDetail() {
 
       {/* NGUYÊN LIỆU */}
       <div className="section">
-        <h3>🥕 Nguyên Liệu</h3>
-        <pre className="ingredient-text">{recipe.ingredients}</pre>
+        <h3>Nguyên Liệu</h3>
+        <div className="servings-display">
+          <span className="servings-icon">👥</span>
+          <span className="servings-text">{recipe.servings || '2'} người ăn</span>
+        </div>
+        <div className="ingredients-display">
+          {recipe.ingredients?.split('\n').filter(i => i.trim()).map((ingredient, index) => (
+            <div key={index} className="ingredient-display-item">
+              {ingredient}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* CÁCH LÀM */}
+      {/* HƯỚNG DẪN CÁCH LÀM */}
       <div className="section">
-        <h3>🔥 Cách Làm</h3>
-        <pre className="steps-text">{recipe.steps}</pre>
+        <h3>Hướng dẫn cách làm</h3>
+        {recipe.cook_time && (
+          <div className="cook-time-display">
+            <span className="clock-icon">🕐</span>
+            <span className="cook-time-text">{recipe.cook_time}</span>
+          </div>
+        )}
+        <div className="steps-list">
+          {recipe.steps?.split('\n').filter(s => s.trim()).map((step, index) => (
+            <div key={index} className="step-display-item">
+              <div className="step-display-header">
+                <span className="step-display-number">{index + 1}</span>
+                <p className="step-display-text">{step}</p>
+              </div>
+              {recipe.step_images_by_step && recipe.step_images_by_step[index] && recipe.step_images_by_step[index].length > 0 && (
+                <div className="step-display-images-gallery">
+                  {recipe.step_images_by_step[index].map((image, imgIndex) => (
+                    <div key={imgIndex} className="step-display-image">
+                      <img src={image} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <hr />
 
       {/* BÌNH LUẬN */}
       <div className="comment-box">
-        <div className="comment-box-header">
-          <h3>💬 Bình Luận ({comments.length})</h3>
-          <div className="comment-sort-row">
-            <label>Sắp xếp: </label>
-            <select value={sortComments} onChange={(e) => setSortComments(e.target.value)}>
-              <option value="latest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-              <option value="top">Được thích nhiều nhất</option>
-            </select>
-          </div>
-        </div>
+        <h3>💬 Bình Luận ({comments.length})</h3>
 
-        {nestedComments.length > 0 ? (
+        {comments.length > 0 ? (
           <ul className="comments-list">
-            {nestedComments.map((c) => (
+            {comments.map((c) => (
               <li key={c.id} className="comment-item">
                 <div className="comment-header">
                   <div className="comment-author-info">
@@ -544,111 +468,14 @@ function RecipeDetail() {
                       <span className="comment-time">{new Date(c.created_at).toLocaleString('vi-VN')}</span>
                     </div>
                   </div>
-                  <div className="comment-actions">
-                    <button className={`btn-like-comment ${c.is_liked ? 'liked' : ''}`} onClick={() => handleLikeComment(c.id)}>❤️ {c.like_count || 0}</button>
-                    <button className="btn-reply-comment" onClick={() => handleReplyClick(c.id)}>↩️</button>
-                    {parseInt(localStorage.getItem('userId'), 10) === c.user_id && (
-                      <>
-                        <button className="btn-edit-comment" onClick={() => handleEditComment(c.id, c.comment)}>✏️</button>
-                        <button className="btn-delete-comment" onClick={() => handleDeleteComment(c.id)}>🗑️</button>
-                      </>
-                    )}
-                  </div>
+                  {parseInt(localStorage.getItem('userId'), 10) === c.user_id && (
+                    <div className="comment-actions">
+                      <button className="btn-edit-comment" onClick={() => handleEditComment(c.id, c.comment)}>✏️</button>
+                      <button className="btn-delete-comment" onClick={() => handleDeleteComment(c.id)}>🗑️</button>
+                    </div>
+                  )}
                 </div>
                 <p className="comment-text">{c.comment}</p>
-
-                {editCommentId === c.id ? (
-                  <div className="reply-box">
-                    <textarea
-                      value={editCommentText}
-                      onChange={(e) => setEditCommentText(e.target.value)}
-                      placeholder="Chỉnh sửa bình luận..."
-                      rows="3"
-                    />
-                    <div className="reply-actions">
-                      <button className="btn-comment" onClick={handleSubmitEdit}>Lưu</button>
-                      <button className="btn-delete-comment" onClick={handleCancelEdit}>Hủy</button>
-                    </div>
-                  </div>
-                ) : null}
-
-                {replyTargetId === c.id && (
-                  <div className="reply-box">
-                    <textarea
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Nhập trả lời của bạn..."
-                      rows="3"
-                    />
-                    <div className="reply-actions">
-                      <button className="btn-comment" onClick={handleSubmitReply}>Gửi</button>
-                      <button className="btn-delete-comment" onClick={handleCancelReply}>Hủy</button>
-                    </div>
-                  </div>
-                )}
-
-                {c.replies && c.replies.length > 0 && (
-                  <ul className="comment-replies">
-                    {c.replies.map((r) => (
-                      <li key={r.id} className="comment-item reply">
-                        <div className="comment-header">
-                          <div className="comment-author-info">
-                            {r.avatar_url ? (
-                              <img src={r.avatar_url} alt={r.username} className="comment-avatar" />
-                            ) : (
-                              <div className="comment-avatar-placeholder">{(r.username || 'U').charAt(0).toUpperCase()}</div>
-                            )}
-                            <div className="comment-author-details">
-                              <b className="comment-author">{r.username}</b>
-                              <span className="comment-time">{new Date(r.created_at).toLocaleString('vi-VN')}</span>
-                            </div>
-                          </div>
-                          <div className="comment-actions">
-                            <button className={`btn-like-comment ${r.is_liked ? 'liked' : ''}`} onClick={() => handleLikeComment(r.id)}>❤️ {r.like_count || 0}</button>
-                            <button className="btn-reply-comment" onClick={() => handleReplyClick(r.id)}>↩️</button>
-                            {parseInt(localStorage.getItem('userId'), 10) === r.user_id && (
-                              <>
-                                <button className="btn-edit-comment" onClick={() => handleEditComment(r.id, r.comment)}>✏️</button>
-                                <button className="btn-delete-comment" onClick={() => handleDeleteComment(r.id)}>🗑️</button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <p className="comment-text">{r.comment}</p>
-
-                        {editCommentId === r.id ? (
-                          <div className="reply-box">
-                            <textarea
-                              value={editCommentText}
-                              onChange={(e) => setEditCommentText(e.target.value)}
-                              placeholder="Chỉnh sửa bình luận..."
-                              rows="3"
-                            />
-                            <div className="reply-actions">
-                              <button className="btn-comment" onClick={handleSubmitEdit}>Lưu</button>
-                              <button className="btn-delete-comment" onClick={handleCancelEdit}>Hủy</button>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {replyTargetId === r.id && (
-                          <div className="reply-box">
-                            <textarea
-                              value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
-                              placeholder="Nhập trả lời của bạn..."
-                              rows="3"
-                            />
-                            <div className="reply-actions">
-                              <button className="btn-comment" onClick={handleSubmitReply}>Gửi</button>
-                              <button className="btn-delete-comment" onClick={handleCancelReply}>Hủy</button>
-                            </div>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </li>
             ))}
           </ul>

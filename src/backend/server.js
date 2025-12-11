@@ -5,7 +5,8 @@ require("dotenv").config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Tăng giới hạn cho base64 images
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve uploaded files so local fallback images are accessible
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -33,6 +34,10 @@ app.use("/rating", ratingRoutes);
 // ✅ Thêm route theo dõi (Follow)
 const followRoutes = require("./routes/follow");
 app.use("/follow", followRoutes);
+
+// ✅ Thêm route theme
+const themeRoutes = require("./routes/theme");
+app.use("/theme", themeRoutes);
 
 // ✅ Start server
 app.listen(3001, () => {

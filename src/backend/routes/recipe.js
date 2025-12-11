@@ -1,8 +1,6 @@
 const express = require("express");
 const db = require("../config/db");
 const { verifyToken } = require("../middleware/auth");
-const jwt = require("jsonwebtoken");
-const SECRET_KEY = process.env.SECRET_KEY || process.env.JWT_SECRET || "SECRET_KEY";
 const multer = require("multer");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
@@ -10,6 +8,7 @@ const path = require("path");
 const router = express.Router();
 
 const upload = multer({ dest: "uploads/" });
+const uploadMultiple = multer({ dest: "uploads/" });
 
 // Helper: check whether cloudinary is configured with real credentials
 function isCloudinaryConfigured() {
@@ -95,13 +94,16 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
     }
 
     db.query(
-      "INSERT INTO cong_thuc (user_id, title, ingredients, steps, image_url, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
-      [user_id, title, ingredients, steps, imageUrl],
-      (err) => {
+      "INSERT INTO cong_thuc (user_id, title, ingredients, steps, image_url, servings, cook_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
+      [user_id, title, ingredients, steps, imageUrl, req.body.servings || "0", req.body.cook_time || "0"],
+      (err, result) => {
         if (err) {
           return res.status(500).json({ message: "❌ Lỗi tạo công thức!" });
         }
-        res.json({ message: "✅ Tạo công thức thành công!" });
+        res.json({ 
+          message: "✅ Tạo công thức thành công!",
+          id: result.insertId 
+        });
       }
     );
   } catch (err) {
@@ -147,10 +149,10 @@ router.get("/search", (req, res) => {
     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
-    WHERE cong_thuc.title LIKE ? OR nguoi_dung.username LIKE ?
+    WHERE cong_thuc.title LIKE ?
     GROUP BY cong_thuc.id
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
-  `, [`%${q}%`, `%${q}%`], (err, result) => {
+  `, [`%${q}%`], (err, result) => {
     if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
     res.json(result);
   });
@@ -177,95 +179,70 @@ router.get("/detail/:id", (req, res) => {
   `, [recipeId], (err, result) => {
     if (err || result.length === 0)
       return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
-    res.json(result[0]);
+    
+    // Lấy ảnh từng bước
+    db.query(
+      "SELECT id, step_index, image_url FROM step_images WHERE recipe_id = ? ORDER BY step_index ASC, id ASC",
+      [recipeId],
+      (err, images) => {
+        const recipe = result[0];
+        if (images && images.length > 0) {
+          // Group images by step_index, keep ID for deletion
+          const stepImages = {};
+          images.forEach(img => {
+            if (!stepImages[img.step_index]) {
+              stepImages[img.step_index] = [];
+            }
+            stepImages[img.step_index].push({
+              id: img.id,
+              image_url: img.image_url
+            });
+          });
+          recipe.step_images_by_step = stepImages;
+        } else {
+          recipe.step_images_by_step = {};
+        }
+        res.json(recipe);
+      }
+    );
   });
 });
 
 // ✅ API thêm bình luận
-// ✅ API thêm bình luận (hỗ trợ trả lời bình luận qua parent_id)
 router.post("/comment", verifyToken, (req, res) => {
-  const { recipe_id, comment, parent_id = null } = req.body;
+  const { recipe_id, comment } = req.body;
   const user_id = req.user.id;
 
   if (!comment || !recipe_id) {
     return res.status(400).json({ message: "❌ Bình luận không được để trống!" });
   }
 
-  // Nếu là reply, kiểm tra bình luận cha thuộc cùng công thức
-  const insertComment = () => {
-    db.query(
-      "INSERT INTO binh_luan (recipe_id, user_id, comment, parent_id, created_at) VALUES (?, ?, ?, ?, NOW())",
-      [recipe_id, user_id, comment, parent_id || null],
-      (err) => {
-        if (err) return res.status(500).json({ message: "❌ Lỗi khi thêm bình luận!" });
-        res.json({ message: "✅ Đã gửi bình luận!" });
-      }
-    );
-  };
-
-  if (parent_id) {
-    db.query(
-      "SELECT id, recipe_id FROM binh_luan WHERE id = ?",
-      [parent_id],
-      (err, result) => {
-        if (err || result.length === 0) {
-          return res.status(400).json({ message: "❌ Bình luận gốc không tồn tại!" });
-        }
-        if (result[0].recipe_id !== Number(recipe_id)) {
-          return res.status(400).json({ message: "❌ Bình luận gốc không thuộc công thức này!" });
-        }
-        insertComment();
-      }
-    );
-  } else {
-    insertComment();
-  }
+  db.query(
+    "INSERT INTO binh_luan (recipe_id, user_id, comment, created_at) VALUES (?, ?, ?, NOW())",
+    [recipe_id, user_id, comment],
+    (err) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi khi thêm bình luận!" });
+      res.json({ message: "✅ Đã gửi bình luận!" });
+    }
+  );
 });
 
-// ✅ API lấy danh sách bình luận (hỗ trợ sort & like count & liked_by_current)
+// ✅ API lấy danh sách bình luận
 router.get("/comment/:id", (req, res) => {
   const recipeId = req.params.id;
-  const sort = (req.query.sort || "latest").toLowerCase();
 
-  let orderClause = "ORDER BY binh_luan.created_at DESC";
-  if (sort === "oldest") orderClause = "ORDER BY binh_luan.created_at ASC";
-  if (sort === "top") orderClause = "ORDER BY like_count DESC, binh_luan.created_at DESC";
-
-  let currentUserId = null;
-  const authHeader = req.headers["authorization"];
-  if (authHeader) {
-    const token = authHeader.split(" ")[1];
-    try {
-      const decoded = jwt.verify(token, SECRET_KEY);
-      currentUserId = decoded.id;
-    } catch (e) {
-      // ignore invalid token, treat as public
+  db.query(
+    `SELECT binh_luan.*, nguoi_dung.username, nguoi_dung.avatar_url
+     FROM binh_luan 
+     JOIN nguoi_dung ON binh_luan.user_id = nguoi_dung.id
+     WHERE recipe_id = ?
+     ORDER BY binh_luan.created_at DESC`,
+    [recipeId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy bình luận!" });
+      res.json(result);
     }
-  }
-
-  const query = `
-    SELECT 
-      binh_luan.*, 
-      nguoi_dung.username, 
-      nguoi_dung.avatar_url,
-      COALESCE(COUNT(DISTINCT comment_likes.id), 0) as like_count,
-      ${currentUserId ? "SUM(CASE WHEN comment_likes.user_id = ? THEN 1 ELSE 0 END) > 0 AS is_liked" : "FALSE as is_liked"}
-    FROM binh_luan 
-    JOIN nguoi_dung ON binh_luan.user_id = nguoi_dung.id
-    LEFT JOIN comment_likes ON comment_likes.comment_id = binh_luan.id
-    WHERE binh_luan.recipe_id = ?
-    GROUP BY binh_luan.id
-    ${orderClause}`;
-
-  const params = currentUserId ? [currentUserId, recipeId] : [recipeId];
-
-  db.query(query, params, (err, result) => {
-    if (err) {
-      console.error("Comment fetch error", err);
-      return res.status(500).json({ message: "❌ Lỗi khi lấy bình luận!" });
-    }
-    res.json(result);
-  });
+  );
 });
 
 // ✅ API cập nhật bình luận
@@ -333,50 +310,6 @@ router.delete("/comment/:id", verifyToken, (req, res) => {
       );
     }
   );
-});
-
-// ✅ API like / unlike bình luận (toggle)
-router.post("/comment/:id/like", verifyToken, (req, res) => {
-  const commentId = req.params.id;
-  const userId = req.user.id;
-
-  // Kiểm tra comment tồn tại
-  db.query("SELECT id FROM binh_luan WHERE id = ?", [commentId], (err, result) => {
-    if (err || result.length === 0) {
-      return res.status(400).json({ message: "❌ Bình luận không tồn tại!" });
-    }
-
-    // Kiểm tra đã like chưa
-    db.query(
-      "SELECT id FROM comment_likes WHERE comment_id = ? AND user_id = ?",
-      [commentId, userId],
-      (err2, liked) => {
-        if (err2) return res.status(500).json({ message: "❌ Lỗi khi kiểm tra like!" });
-
-        if (liked.length > 0) {
-          // Nếu đã like -> unlike
-          db.query(
-            "DELETE FROM comment_likes WHERE id = ?",
-            [liked[0].id],
-            (err3) => {
-              if (err3) return res.status(500).json({ message: "❌ Lỗi khi bỏ like!" });
-              return res.json({ message: "✅ Đã bỏ thích bình luận", liked: false });
-            }
-          );
-        } else {
-          // Chưa like -> like
-          db.query(
-            "INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)",
-            [commentId, userId],
-            (err4) => {
-              if (err4) return res.status(500).json({ message: "❌ Lỗi khi thích bình luận!" });
-              return res.json({ message: "✅ Đã thích bình luận", liked: true });
-            }
-          );
-        }
-      }
-    );
-  });
 });
 
 // ✅ API lấy danh sách công thức của user đang đăng nhập (với stats)
@@ -456,8 +389,8 @@ router.put("/update/:id", verifyToken, upload.single("image"), async (req, res) 
     }
 
     // Nếu có ảnh mới, upload lên Cloudinary
-    let updateData = [title, ingredients, steps, recipeId, user_id];
-    let updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=? WHERE id=? AND user_id=?";
+    let updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", recipeId, user_id];
+    let updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=? WHERE id=? AND user_id=?";
 
     if (req.file) {
       let newImageUrl = null;
@@ -486,13 +419,24 @@ router.put("/update/:id", verifyToken, upload.single("image"), async (req, res) 
       }
 
       if (newImageUrl) {
-        updateData = [title, ingredients, steps, newImageUrl, recipeId, user_id];
-        updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, image_url=? WHERE id=? AND user_id=?";
+        updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", newImageUrl, recipeId, user_id];
+        updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=?, image_url=? WHERE id=? AND user_id=?";
       }
     }
 
+    console.log("Update recipe input", {
+      recipeId,
+      user_id,
+      body: req.body,
+      hasFile: !!req.file,
+      file: req.file ? { originalname: req.file.originalname, path: req.file.path, mimetype: req.file.mimetype, size: req.file.size } : null,
+    });
+    console.log("Update recipe query", { updateQuery, updateData });
     db.query(updateQuery, updateData, (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi cập nhật công thức!" });
+      if (err) {
+        console.error("Update recipe error", err);
+        return res.status(500).json({ message: "❌ Lỗi cập nhật công thức!", detail: err.message, sql: err.sqlMessage, sqlState: err.sqlState });
+      }
 
       if (result.affectedRows === 0) {
         return res.status(403).json({ message: "❌ Bạn không có quyền cập nhật công thức này!" });
@@ -524,17 +468,162 @@ router.delete("/delete/:id", verifyToken, (req, res) => {
   );
 });
 
-// ✅ API view counter
+// ✅ API view counter (chặn spam: 1 view/user/recipe/1 phút)
 router.post("/view/:id", (req, res) => {
   const recipeId = req.params.id;
+  const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+  const userAgent = req.get('user-agent') || 'unknown';
+  
+  // Kiểm tra xem IP này đã xem trong 1 phút chưa
   db.query(
-    "UPDATE cong_thuc SET views = views + 1 WHERE id = ?",
-    [recipeId],
-    (err) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi cập nhật view!" });
-      res.json({ message: "✅ View count updated" });
+    `SELECT id FROM recipe_views 
+     WHERE recipe_id = ? AND client_ip = ? AND user_agent = ? 
+     AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+     LIMIT 1`,
+    [recipeId, clientIp, userAgent],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: "❌ Lỗi cập nhật view!", updated: false });
+      }
+      
+      if (result.length > 0) {
+        // Đã xem trong 30 phút rồi, không tăng view
+        return res.json({ message: "⏳ Bạn đã xem công thức này gần đây", updated: false });
+      }
+      
+      // Chưa xem, tăng view và lưu record
+      db.query(
+        "UPDATE cong_thuc SET views = COALESCE(views, 0) + 1 WHERE id = ?",
+        [recipeId],
+        (err1) => {
+          if (err1) {
+            return res.status(500).json({ message: "❌ Lỗi cập nhật view!", updated: false });
+          }
+          
+          // Lưu record view
+          db.query(
+            "INSERT INTO recipe_views (recipe_id, client_ip, user_agent) VALUES (?, ?, ?)",
+            [recipeId, clientIp, userAgent],
+            (err2) => {
+              if (err2) {
+                console.warn("⚠️  Cảnh báo: Không lưu được record view", err2.message);
+              }
+              res.json({ message: "✅ Cảm ơn bạn đã xem công thức!", updated: true });
+            }
+          );
+        }
+      );
     }
   );
+});
+
+// ✅ API upload ảnh từng bước
+router.post("/upload-step-images/:id", verifyToken, uploadMultiple.array("images", 20), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stepIndex } = req.body;
+    const user_id = req.user.id;
+
+    if (!stepIndex || !req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "❌ Vui lòng chọn ảnh!" });
+    }
+
+    // Verify ownership
+    db.query("SELECT user_id FROM cong_thuc WHERE id = ?", [id], async (err, result) => {
+      if (err || !result.length || result[0].user_id !== user_id) {
+        return res.status(403).json({ message: "❌ Không có quyền!" });
+      }
+
+      try {
+        const uploadedImages = [];
+        for (const file of req.files) {
+          let imageUrl = null;
+
+          if (isCloudinaryConfigured()) {
+            try {
+              const uploadImg = await cloudinary.uploader.upload(file.path);
+              imageUrl = uploadImg.secure_url;
+              fs.unlink(file.path, () => {});
+            } catch (uploadErr) {
+              console.warn("⚠️  Cloudinary failed, using local fallback");
+              try {
+                const ext = path.extname(file.originalname) || "";
+                const newName = file.filename + ext;
+                const target = path.join(__dirname, "..", "uploads", newName);
+                fs.renameSync(file.path, target);
+                imageUrl = `http://localhost:3001/uploads/${newName}`;
+              } catch (localErr) {
+                console.warn("⚠️  Local fallback failed");
+                try { fs.unlinkSync(file.path); } catch(e){}
+              }
+            }
+          } else {
+            try {
+              const ext = path.extname(file.originalname) || "";
+              const newName = file.filename + ext;
+              const target = path.join(__dirname, "..", "uploads", newName);
+              fs.renameSync(file.path, target);
+              imageUrl = `http://localhost:3001/uploads/${newName}`;
+            } catch (localErr) {
+              console.warn("⚠️  Local fallback failed");
+              try { fs.unlinkSync(file.path); } catch(e){}
+            }
+          }
+
+          if (imageUrl) {
+            db.query(
+              "INSERT INTO step_images (recipe_id, step_index, image_url) VALUES (?, ?, ?)",
+              [id, stepIndex, imageUrl],
+              (err) => {
+                if (!err) uploadedImages.push(imageUrl);
+              }
+            );
+          }
+        }
+
+        // Wait for all inserts
+        setTimeout(() => {
+          res.json({ 
+            message: "✅ Upload ảnh thành công!",
+            images: uploadedImages 
+          });
+        }, 500);
+      } catch (err) {
+        res.status(500).json({ message: "❌ Lỗi upload ảnh!" });
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
+});
+
+// ✅ Xóa hình ảnh từng bước
+router.delete("/delete-step-image/:id/:imageId", verifyToken, (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+    const user_id = req.user.id;
+
+    // Verify ownership
+    db.query(
+      "SELECT si.id, ct.user_id FROM step_images si JOIN cong_thuc ct ON si.recipe_id = ct.id WHERE si.id = ? AND ct.id = ?",
+      [imageId, id],
+      (err, result) => {
+        if (err || !result.length || result[0].user_id !== user_id) {
+          return res.status(403).json({ message: "❌ Không có quyền!" });
+        }
+
+        // Xóa từ database
+        db.query("DELETE FROM step_images WHERE id = ?", [imageId], (err) => {
+          if (err) {
+            return res.status(500).json({ message: "❌ Lỗi xóa ảnh!" });
+          }
+          res.json({ message: "✅ Đã xóa ảnh!" });
+        });
+      }
+    );
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 module.exports = router;

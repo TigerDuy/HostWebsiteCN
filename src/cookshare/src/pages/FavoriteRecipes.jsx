@@ -66,7 +66,7 @@ function FavoriteRecipes() {
   return (
     <div className="container">
       <div className="page-header">
-        <h2>❤️ Công Thức Đã Lưu</h2>
+        <h2 className="page-title">❤️ Công Thức Đã Lưu</h2>
       </div>
 
       {recipes.length > 0 ? (
