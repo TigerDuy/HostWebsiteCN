@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./RecipeDetail.css";
 
 function RecipeDetail() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = String(params.id || "");
   const navigate = useNavigate();
+  const viewCountedRef = useRef(false);
   const [recipe, setRecipe] = useState({});
   const [comments, setComments] = useState([]);
   const [stats, setStats] = useState({
@@ -20,6 +22,7 @@ function RecipeDetail() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   const fetchRecipeData = useCallback(async () => {
+    if (!id) return;
     try {
       const recipeRes = await axios.get(
         `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/detail/${id}`
@@ -96,7 +99,8 @@ function RecipeDetail() {
 
   // Gọi tăng view đúng một lần sau khi recipe.id có dữ liệu
   useEffect(() => {
-    if (!recipe?.id) return;
+    if (!recipe?.id || viewCountedRef.current) return;
+    
     const controller = new AbortController();
     fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
@@ -104,8 +108,11 @@ function RecipeDetail() {
         if (data && data.updated) {
           setRecipe(prev => ({ ...prev, views: (Number(prev?.views || 0) + 1) }));
         }
+        viewCountedRef.current = true;
       })
-      .catch(() => {});
+      .catch(() => {
+        viewCountedRef.current = true;
+      });
     return () => controller.abort();
   }, [recipe?.id]);
   const handleFavorite = async () => {
@@ -395,14 +402,48 @@ function RecipeDetail() {
 
       {/* NGUYÊN LIỆU */}
       <div className="section">
-        <h3>🥕 Nguyên Liệu</h3>
-        <pre className="ingredient-text">{recipe.ingredients}</pre>
+        <h3>Nguyên Liệu</h3>
+        <div className="servings-display">
+          <span className="servings-icon">👥</span>
+          <span className="servings-text">{recipe.servings || '2'} người ăn</span>
+        </div>
+        <div className="ingredients-display">
+          {recipe.ingredients?.split('\n').filter(i => i.trim()).map((ingredient, index) => (
+            <div key={index} className="ingredient-display-item">
+              {ingredient}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* CÁCH LÀM */}
+      {/* HƯỚNG DẪN CÁCH LÀM */}
       <div className="section">
-        <h3>🔥 Cách Làm</h3>
-        <pre className="steps-text">{recipe.steps}</pre>
+        <h3>Hướng dẫn cách làm</h3>
+        {recipe.cook_time && (
+          <div className="cook-time-display">
+            <span className="clock-icon">🕐</span>
+            <span className="cook-time-text">{recipe.cook_time}</span>
+          </div>
+        )}
+        <div className="steps-list">
+          {recipe.steps?.split('\n').filter(s => s.trim()).map((step, index) => (
+            <div key={index} className="step-display-item">
+              <div className="step-display-header">
+                <span className="step-display-number">{index + 1}</span>
+                <p className="step-display-text">{step}</p>
+              </div>
+              {recipe.step_images_by_step && recipe.step_images_by_step[index] && recipe.step_images_by_step[index].length > 0 && (
+                <div className="step-display-images-gallery">
+                  {recipe.step_images_by_step[index].map((image, imgIndex) => (
+                    <div key={imgIndex} className="step-display-image">
+                      <img src={image} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <hr />

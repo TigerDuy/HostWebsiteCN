@@ -7,6 +7,7 @@ import AccountSettings from "./pages/AccountSettings";
 import UserProfile from "./pages/UserProfile";
 import ThemeSettings from "./pages/ThemeSettings";
 import ThemeCustomization from "./pages/ThemeCustomization";
+import ThemeMarketplace from "./pages/ThemeMarketplace";
 import Navbar from "./components/Navbar";
 // Sử dụng trang tạo công thức mới (CreateRecipe.jsx)
 import CreateRecipe from "./pages/CreateRecipe";
@@ -47,6 +48,7 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
         <Route path="/theme" element={<ProtectedRoute><ThemeSettings /></ProtectedRoute>} />
         <Route path="/customize" element={<ProtectedRoute><ThemeCustomization /></ProtectedRoute>} />
+        <Route path="/theme-marketplace" element={<ProtectedRoute><ThemeMarketplace /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>

@@ -1,22 +1,43 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import './ThemeCustomization.css';
 
 function ThemeCustomization() {
   const [primaryColor, setPrimaryColor] = useState('#ff7f50');
   const [backgroundImage, setBackgroundImage] = useState('');
   const [backgroundPreview, setBackgroundPreview] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const [themeName, setThemeName] = useState('My Custom Theme');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Load saved settings
-    const savedColor = localStorage.getItem('primaryColor') || '#ff7f50';
-    const savedBg = localStorage.getItem('backgroundImage') || '';
-    
-    setPrimaryColor(savedColor);
-    setBackgroundImage(savedBg);
-    setBackgroundPreview(savedBg);
-    
-    applyTheme(savedColor, savedBg);
+    // Load from server
+    loadThemePreferences();
   }, []);
+
+  const loadThemePreferences = async () => {
+    try {
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setPrimaryColor(res.data.primary_color || '#ff7f50');
+      setBackgroundImage(res.data.background_image || '');
+      setBackgroundPreview(res.data.background_image || '');
+      applyTheme(res.data.primary_color || '#ff7f50', res.data.background_image || '');
+    } catch (err) {
+      console.warn('Không thể tải theme từ server, dùng localStorage');
+      const savedColor = localStorage.getItem('primaryColor') || '#ff7f50';
+      const savedBg = localStorage.getItem('backgroundImage') || '';
+      setPrimaryColor(savedColor);
+      setBackgroundImage(savedBg);
+      setBackgroundPreview(savedBg);
+      applyTheme(savedColor, savedBg);
+    }
+  };
 
   const applyTheme = (color, bgImage) => {
     document.documentElement.style.setProperty('--primary-color', color);
@@ -66,10 +87,30 @@ function ThemeCustomization() {
     applyTheme(primaryColor, '');
   };
 
-  const handleSave = () => {
-    localStorage.setItem('primaryColor', primaryColor);
-    localStorage.setItem('backgroundImage', backgroundImage);
-    alert('✅ Đã lưu cài đặt giao diện!');
+  const handleSave = async () => {
+    setIsSaving(true);
+    setMessage('');
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
+        {
+          primary_color: primaryColor,
+          background_image: backgroundImage,
+          theme_name: 'Custom Theme'
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessage('✅ Đã lưu cài đặt giao diện!');
+      localStorage.setItem('primaryColor', primaryColor);
+      localStorage.setItem('backgroundImage', backgroundImage);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Lỗi lưu cài đặt! Thử lại sau.');
+      console.error(err);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -84,7 +125,93 @@ function ThemeCustomization() {
     localStorage.removeItem('backgroundImage');
     
     applyTheme(defaultColor, defaultBg);
-    alert('✅ Đã khôi phục cài đặt mặc định!');
+    setMessage('✅ Đã khôi phục cài đặt mặc định!');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  // 📤 Export theme as JSON file
+  const handleExportTheme = () => {
+    const themeData = {
+      primary_color: primaryColor,
+      background_image: backgroundImage,
+      theme_name: 'CookShare Theme',
+      exported_at: new Date().toISOString()
+    };
+
+    const dataStr = JSON.stringify(themeData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cookshare-theme-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    setMessage('📥 Đã tải xuống file giao diện!');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  // 📥 Import theme from JSON file
+  const handleImportTheme = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const themeData = JSON.parse(event.target.result);
+        
+        if (!themeData.primary_color) {
+          setMessage('❌ File không hợp lệ! Thiếu primary_color');
+          return;
+        }
+
+        setPrimaryColor(themeData.primary_color);
+        if (themeData.background_image) {
+          setBackgroundImage(themeData.background_image);
+          setBackgroundPreview(themeData.background_image);
+        }
+
+        applyTheme(themeData.primary_color, themeData.background_image || '');
+        setMessage('✅ Đã tải giao diện từ file!');
+        setTimeout(() => setMessage(''), 3000);
+      } catch (err) {
+        setMessage('❌ Lỗi đọc file! Vui lòng kiểm tra định dạng JSON');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  // 🌐 Chia sẻ theme
+  const handleShareTheme = async () => {
+    if (!themeName.trim()) {
+      setMessage('❌ Vui lòng nhập tên theme!');
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/share`,
+        {
+          theme_name: themeName
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessage('✅ ' + res.data.message);
+      setShowShareDialog(false);
+      setTimeout(() => setMessage(''), 4000);
+    } catch (err) {
+      setMessage('❌ Lỗi chia sẻ theme!');
+      console.error(err);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -169,13 +296,75 @@ function ThemeCustomization() {
 
         {/* Action Buttons */}
         <div className="theme-actions">
-          <button onClick={handleSave} className="btn-save" style={{ backgroundColor: primaryColor }}>
-            💾 Lưu Cài Đặt
+          <button 
+            onClick={handleSave} 
+            disabled={isSaving}
+            className="btn-save" 
+            style={{ backgroundColor: primaryColor }}
+          >
+            {isSaving ? '⏳ Đang lưu...' : '💾 Lưu Cài Đặt'}
           </button>
           <button onClick={handleReset} className="btn-reset">
             🔄 Khôi Phục Mặc Định
           </button>
+          <button onClick={handleExportTheme} className="btn-export">
+            📤 Xuất Giao Diện
+          </button>
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleImportTheme}
+            className="file-input"
+            id="theme-import"
+            style={{ display: 'none' }}
+          />
+          <label htmlFor="theme-import" className="btn-import">
+            📥 Nhập Giao Diện
+          </label>
+          <button onClick={() => setShowShareDialog(true)} className="btn-share">
+            🌐 Chia Sẻ Theme
+          </button>
         </div>
+
+        {/* Share Theme Dialog */}
+        {showShareDialog && (
+          <div className="modal-overlay" onClick={() => setShowShareDialog(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h2>🌐 Chia Sẻ Theme</h2>
+              <p>Nhập tên theme để chia sẻ cùng cộng đồng:</p>
+              <input
+                type="text"
+                value={themeName}
+                onChange={(e) => setThemeName(e.target.value)}
+                className="theme-name-input"
+                placeholder="Ví dụ: Theme Nó Đỏ Cam"
+              />
+              <div className="modal-actions">
+                <button 
+                  onClick={handleShareTheme}
+                  disabled={isSharing}
+                  className="btn-confirm"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {isSharing ? '⏳ Đang chia sẻ...' : '✅ Chia Sẻ'}
+                </button>
+                <button 
+                  onClick={() => setShowShareDialog(false)}
+                  className="btn-cancel"
+                >
+                  ❌ Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Message */}
+        {message && (
+          <div className="status-message">
+            {message}
+          </div>
+        )}
       </div>
     </div>
   );

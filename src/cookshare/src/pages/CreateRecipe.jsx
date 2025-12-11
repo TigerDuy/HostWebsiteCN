@@ -9,11 +9,13 @@ function CreateRecipe() {
   const [servings, setServings] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [ingredientsList, setIngredientsList] = useState([""]);
-  const [stepsList, setStepsList] = useState([{ text: "", image: null, preview: null }]);
+  const [stepsList, setStepsList] = useState([{ text: "", images: [], previews: [] }]);
   const [coverImage, setCoverImage] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [openIngredientMenuIndex, setOpenIngredientMenuIndex] = useState(null);
 
   const navigate = useNavigate();
 
@@ -34,7 +36,15 @@ function CreateRecipe() {
   const removeIngredient = (index) => {
     if (ingredientsList.length > 1) {
       setIngredientsList(ingredientsList.filter((_, i) => i !== index));
+      setOpenIngredientMenuIndex(null);
     }
+  };
+
+  const insertIngredientAfter = (index) => {
+    const updated = [...ingredientsList];
+    updated.splice(index + 1, 0, "");
+    setIngredientsList(updated);
+    setOpenIngredientMenuIndex(null);
   };
 
   const updateIngredient = (index, value) => {
@@ -43,14 +53,27 @@ function CreateRecipe() {
     setIngredientsList(updated);
   };
 
+  const toggleIngredientMenu = (index) => {
+    setOpenIngredientMenuIndex(openIngredientMenuIndex === index ? null : index);
+  };
+
   // Steps functions
   const addStep = () => {
-    setStepsList([...stepsList, { text: "", image: null, preview: null }]);
+    setStepsList([...stepsList, { text: "", images: [], previews: [] }]);
+  };
+
+  const insertStepAfter = (index) => {
+    const newStep = { text: "", images: [], previews: [] };
+    const updated = [...stepsList];
+    updated.splice(index + 1, 0, newStep);
+    setStepsList(updated);
+    setOpenMenuIndex(null);
   };
 
   const removeStep = (index) => {
     if (stepsList.length > 1) {
       setStepsList(stepsList.filter((_, i) => i !== index));
+      setOpenMenuIndex(null);
     }
   };
 
@@ -60,20 +83,27 @@ function CreateRecipe() {
     setStepsList(updated);
   };
 
-  const updateStepImage = (index, file) => {
-    if (file) {
-      const updated = [...stepsList];
-      updated[index].image = file;
-      updated[index].preview = URL.createObjectURL(file);
-      setStepsList(updated);
-    }
+  const updateStepImage = (index, files) => {
+    if (!files) return;
+    const updated = [...stepsList];
+    const newFiles = Array.from(files);
+    updated[index].images = [...(updated[index].images || []), ...newFiles];
+    updated[index].previews = [
+      ...(updated[index].previews || []),
+      ...newFiles.map(file => URL.createObjectURL(file))
+    ];
+    setStepsList(updated);
   };
 
-  const removeStepImage = (index) => {
+  const removeStepImage = (stepIndex, imageIndex) => {
     const updated = [...stepsList];
-    updated[index].image = null;
-    updated[index].preview = null;
+    updated[stepIndex].images.splice(imageIndex, 1);
+    updated[stepIndex].previews.splice(imageIndex, 1);
     setStepsList(updated);
+  };
+
+  const toggleMenu = (index) => {
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
   };
 
   // Submit form
@@ -119,16 +149,44 @@ function CreateRecipe() {
     formData.append("title", title);
     formData.append("ingredients", ingredients);
     formData.append("steps", steps);
+    formData.append("servings", servings || "0");
+    formData.append("cook_time", cookTime || "0");
     if (coverImage) formData.append("image", coverImage);
 
     try {
       setLoading(true);
-      await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/create`, formData, {
+      const response = await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/create`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
+
+      // Lấy recipe ID từ response
+      const recipeId = response.data.id;
+
+      // Upload ảnh từng bước
+      for (let i = 0; i < stepsList.length; i++) {
+        const step = stepsList[i];
+        if (step.images && step.images.length > 0) {
+          const stepFormData = new FormData();
+          stepFormData.append("stepIndex", i);
+          for (const image of step.images) {
+            stepFormData.append("images", image);
+          }
+          
+          await axios.post(
+            `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/upload-step-images/${recipeId}`,
+            stepFormData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+      }
 
       alert("✅ Đăng công thức thành công!");
       navigate("/my-recipes");
@@ -235,16 +293,36 @@ function CreateRecipe() {
                               onChange={(e) => updateIngredient(index, e.target.value)}
                               className="ingredient-input"
                             />
-                            {ingredientsList.length > 1 && (
+                            <div className="ingredient-menu-container">
                               <button
                                 type="button"
-                                onClick={() => removeIngredient(index)}
-                                className="menu-btn"
-                                title="Xóa nguyên liệu"
+                                onClick={() => toggleIngredientMenu(index)}
+                                className="menu-dots-btn"
+                                title="Tùy chọn"
                               >
-                                🗑️
+                                ⋯
                               </button>
-                            )}
+                              {openIngredientMenuIndex === index && (
+                                <div className="ingredient-dropdown-menu">
+                                  <button
+                                    type="button"
+                                    onClick={() => insertIngredientAfter(index)}
+                                    className="dropdown-item"
+                                  >
+                                    + Nguyên liệu
+                                  </button>
+                                  {ingredientsList.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeIngredient(index)}
+                                      className="dropdown-item delete-item"
+                                    >
+                                      Xóa nguyên liệu
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </Draggable>
@@ -284,53 +362,80 @@ function CreateRecipe() {
                     {stepsList.map((step, index) => (
                       <Draggable draggableId={`step-${index}`} index={index} key={`step-${index}`}>
                         {(dragProvided) => (
-                          <div className="step-row" ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
-                            <div className="step-header">
+                          <div className="step-item" ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
+                            {/* Top row: number, drag handle, textarea, menu */}
+                            <div className="step-main-row">
+                              <div className="step-number-circle">{index + 1}</div>
                               <span className="step-drag-handle" {...dragProvided.dragHandleProps}>≡</span>
-                              <div className="step-number">{index + 1}</div>
-                            </div>
-                            <div className="step-content-wrapper">
-                              <div className="step-image-upload">
-                                {step.preview ? (
-                                  <div className="step-image-preview">
-                                    <img src={step.preview} alt={`Step ${index + 1}`} />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeStepImage(index)}
-                                      className="remove-image-btn"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <label className="upload-box">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) => updateStepImage(index, e.target.files?.[0])}
-                                      style={{ display: 'none' }}
-                                    />
-                                    <span className="upload-icon">📷</span>
-                                  </label>
-                                )}
-                              </div>
                               <textarea
-                                placeholder="Trộn đều và nước đến khi đặc lại"
+                                placeholder="Trộn bột và nước đến khi đặc lại"
                                 value={step.text}
                                 onChange={(e) => updateStepText(index, e.target.value)}
                                 className="step-textarea"
-                                rows="3"
+                                rows="2"
                               />
-                              {stepsList.length > 1 && (
+                              <div className="step-menu-container">
                                 <button
                                   type="button"
-                                  onClick={() => removeStep(index)}
-                                  className="menu-btn"
-                                  title="Xóa bước"
+                                  onClick={() => toggleMenu(index)}
+                                  className="menu-dots-btn"
+                                  title="Tùy chọn"
                                 >
-                                  🗑️
+                                  ⋯
                                 </button>
-                              )}
+                                {openMenuIndex === index && (
+                                  <div className="step-dropdown-menu">
+                                    <button
+                                      type="button"
+                                      onClick={() => insertStepAfter(index)}
+                                      className="dropdown-item"
+                                    >
+                                      Thêm bước
+                                    </button>
+                                    {stepsList.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeStep(index)}
+                                        className="dropdown-item delete-item"
+                                      >
+                                        Xóa bước này
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Bottom row: image upload */}
+                            <div className="step-image-row">
+                              <div className="step-image-gallery">
+                                {step.previews && step.previews.length > 0 ? (
+                                  <div className="step-images-container">
+                                    {step.previews.map((preview, imgIndex) => (
+                                      <div key={imgIndex} className="step-image-preview">
+                                        <img src={preview} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeStepImage(index, imgIndex)}
+                                          className="remove-image-btn"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <label className="step-upload-box">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(e) => updateStepImage(index, e.target.files)}
+                                    style={{ display: 'none' }}
+                                  />
+                                  <span className="upload-icon">📷</span>
+                                </label>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -349,11 +454,11 @@ function CreateRecipe() {
 
           {/* Action Buttons */}
           <div className="form-actions">
-            <button type="button" onClick={() => navigate(-1)} className="btn-delete">
-              🗑️ Xóa
+            <button type="button" onClick={() => navigate(-1)} className="btn-cancel">
+              Hủy
             </button>
             <button type="submit" disabled={loading} className="btn-publish">
-              {loading ? "⏳ Đang đăng..." : "Lên sóng"}
+              {loading ? "⏳ Đang đăng..." : "Đăng bài"}
             </button>
           </div>
         </form>

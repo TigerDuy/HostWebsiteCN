@@ -5,18 +5,21 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import "./CreateRecipe.css";
 
 function EditRecipe() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = String(params.id || "");
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [ingredientsList, setIngredientsList] = useState([""]);
-  const [stepsList, setStepsList] = useState([{ text: "", image: null, preview: null }]);
+  const [stepsList, setStepsList] = useState([{ text: "", images: [], previews: [], imageIds: [] }]);
   const [coverImage, setCoverImage] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [openIngredientMenuIndex, setOpenIngredientMenuIndex] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -37,11 +40,20 @@ function EditRecipe() {
         // Parse ingredients/steps by newline
         const ings = (r.ingredients || "").split("\n").filter(s => s.trim());
         setIngredientsList(ings.length ? ings : [""]);
-        const steps = (r.steps || "").split("\n").filter(s => s.trim()).map(t => ({ text: t, image: null, preview: null }));
-        setStepsList(steps.length ? steps : [{ text: "", image: null, preview: null }]);
+        const steps = (r.steps || "").split("\n").filter(s => s.trim()).map((t, idx) => {
+          // Tải hình ảnh từng bước từ step_images_by_step
+          const stepImages = r.step_images_by_step?.[idx] || [];
+          return {
+            text: t,
+            images: [], // Không tải file gốc lại, chỉ hiển thị preview
+            previews: stepImages.map(img => img.image_url), // Hiển thị URL hình ảnh từ DB
+            imageIds: stepImages.map(img => img.id) // Lưu ID để xóa sau
+          };
+        });
+        setStepsList(steps.length ? steps : [{ text: "", images: [], previews: [] }]);
         // Optional fields if present in API
-        setServings(r.servings || "");
-        setCookTime(r.cook_time || "");
+        setServings(r.servings || "0");
+        setCookTime(r.cook_time || "0");
       } catch (e) {
         setError("❌ Không tải được công thức!");
       }
@@ -59,7 +71,19 @@ function EditRecipe() {
 
   const addIngredient = () => setIngredientsList([...ingredientsList, ""]);
   const removeIngredient = (index) => {
-    if (ingredientsList.length > 1) setIngredientsList(ingredientsList.filter((_, i) => i !== index));
+    if (ingredientsList.length > 1) {
+      setIngredientsList(ingredientsList.filter((_, i) => i !== index));
+      setOpenIngredientMenuIndex(null);
+    }
+  };
+  const insertIngredientAfter = (index) => {
+    const updated = [...ingredientsList];
+    updated.splice(index + 1, 0, "");
+    setIngredientsList(updated);
+    setOpenIngredientMenuIndex(null);
+  };
+  const toggleIngredientMenu = (index) => {
+    setOpenIngredientMenuIndex(openIngredientMenuIndex === index ? null : index);
   };
   const updateIngredient = (index, value) => {
     const updated = [...ingredientsList];
@@ -67,26 +91,62 @@ function EditRecipe() {
     setIngredientsList(updated);
   };
 
-  const addStep = () => setStepsList([...stepsList, { text: "", image: null, preview: null }]);
+  const addStep = () => setStepsList([...stepsList, { text: "", images: [], previews: [], imageIds: [] }]);
+  const insertStepAfter = (index) => {
+    const newStep = { text: "", images: [], previews: [], imageIds: [] };
+    const updated = [...stepsList];
+    updated.splice(index + 1, 0, newStep);
+    setStepsList(updated);
+    setOpenMenuIndex(null);
+  };
   const removeStep = (index) => {
-    if (stepsList.length > 1) setStepsList(stepsList.filter((_, i) => i !== index));
+    if (stepsList.length > 1) {
+      setStepsList(stepsList.filter((_, i) => i !== index));
+      setOpenMenuIndex(null);
+    }
+  };
+  const toggleMenu = (index) => {
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
   };
   const updateStepText = (index, value) => {
     const updated = [...stepsList];
     updated[index].text = value;
     setStepsList(updated);
   };
-  const updateStepImage = (index, file) => {
-    if (!file) return;
+  const updateStepImage = (index, files) => {
+    if (!files) return;
     const updated = [...stepsList];
-    updated[index].image = file;
-    updated[index].preview = URL.createObjectURL(file);
+    const newFiles = Array.from(files);
+    updated[index].images = [...(updated[index].images || []), ...newFiles];
+    updated[index].previews = [
+      ...(updated[index].previews || []),
+      ...newFiles.map(file => URL.createObjectURL(file))
+    ];
+    // Ảnh mới không có ID (sẽ được tạo khi upload)
+    updated[index].imageIds = [...(updated[index].imageIds || []), ...newFiles.map(() => null)];
     setStepsList(updated);
   };
-  const removeStepImage = (index) => {
+  const removeStepImage = async (stepIndex, imageIndex) => {
+    const token = localStorage.getItem("token");
+    const imageId = stepsList[stepIndex].imageIds?.[imageIndex];
+
+    // Xóa từ database nếu có ID
+    if (imageId) {
+      try {
+        await axios.delete(
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/delete-step-image/${id}/${imageId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (err) {
+        console.error("Lỗi xóa ảnh từ server:", err);
+      }
+    }
+
+    // Xóa từ state
     const updated = [...stepsList];
-    updated[index].image = null;
-    updated[index].preview = null;
+    updated[stepIndex].images.splice(imageIndex, 1);
+    updated[stepIndex].previews.splice(imageIndex, 1);
+    updated[stepIndex].imageIds.splice(imageIndex, 1);
     setStepsList(updated);
   };
 
@@ -130,8 +190,8 @@ function EditRecipe() {
     formData.append("title", title);
     formData.append("ingredients", ingredients);
     formData.append("steps", steps);
-    if (servings) formData.append("servings", servings);
-    if (cookTime) formData.append("cook_time", cookTime);
+    formData.append("servings", servings || "0");
+    formData.append("cook_time", cookTime || "0");
     if (coverImage) formData.append("image", coverImage);
 
     try {
@@ -139,6 +199,30 @@ function EditRecipe() {
       await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/update/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
+
+      // Upload ảnh từng bước
+      for (let i = 0; i < stepsList.length; i++) {
+        const step = stepsList[i];
+        if (step.images && step.images.length > 0) {
+          const stepFormData = new FormData();
+          stepFormData.append("stepIndex", i);
+          for (const image of step.images) {
+            stepFormData.append("images", image);
+          }
+          
+          await axios.post(
+            `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/upload-step-images/${id}`,
+            stepFormData,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+      }
+
       alert("✅ Cập nhật công thức thành công!");
       navigate(`/recipe/${id}`);
     } catch (err) {
@@ -169,7 +253,7 @@ function EditRecipe() {
   return (
     <div className="create-recipe-container">
       <div className="create-recipe-content">
-        <h1>✏️ Sửa công thức</h1>
+        <h1 className="page-title">✏️ Sửa công thức</h1>
         <form className="create-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
 
@@ -212,9 +296,17 @@ function EditRecipe() {
                           <div className="ingredient-row" ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
                             <span className="drag-handle" {...dragProvided.dragHandleProps}>≡</span>
                             <input type="text" placeholder="250g bột" value={ingredient} onChange={(e) => updateIngredient(index, e.target.value)} className="ingredient-input" />
-                            {ingredientsList.length > 1 && (
-                              <button type="button" onClick={() => removeIngredient(index)} className="menu-btn" title="Xóa nguyên liệu">🗑️</button>
-                            )}
+                            <div className="ingredient-menu-container">
+                              <button type="button" onClick={() => toggleIngredientMenu(index)} className="menu-dots-btn" title="Tùy chọn">⋯</button>
+                              {openIngredientMenuIndex === index && (
+                                <div className="ingredient-dropdown-menu">
+                                  <button type="button" onClick={() => insertIngredientAfter(index)} className="dropdown-item">+ Nguyên liệu</button>
+                                  {ingredientsList.length > 1 && (
+                                    <button type="button" onClick={() => removeIngredient(index)} className="dropdown-item delete-item">Xóa nguyên liệu</button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </Draggable>
@@ -240,29 +332,52 @@ function EditRecipe() {
                     {stepsList.map((step, index) => (
                       <Draggable draggableId={`step-${index}`} index={index} key={`step-${index}`}>
                         {(dragProvided) => (
-                          <div className="step-row" ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
-                            <div className="step-header">
+                          <div className="step-item" ref={dragProvided.innerRef} {...dragProvided.draggableProps}>
+                            <div className="step-main-row">
+                              <div className="step-number-circle">{index + 1}</div>
                               <span className="step-drag-handle" {...dragProvided.dragHandleProps}>≡</span>
-                              <div className="step-number">{index + 1}</div>
-                            </div>
-                            <div className="step-content-wrapper">
-                              <div className="step-image-upload">
-                                {step.preview ? (
-                                  <div className="step-image-preview">
-                                    <img src={step.preview} alt={`Step ${index + 1}`} />
-                                    <button type="button" onClick={() => removeStepImage(index)} className="remove-image-btn">×</button>
+                              <textarea placeholder="Trộn bột và nước đến khi đặc lại" value={step.text} onChange={(e) => updateStepText(index, e.target.value)} className="step-textarea" rows="2" />
+                              <div className="step-menu-container">
+                                <button type="button" onClick={() => toggleMenu(index)} className="menu-dots-btn" title="Tùy chọn">⋯</button>
+                                {openMenuIndex === index && (
+                                  <div className="step-dropdown-menu">
+                                    <button type="button" onClick={() => insertStepAfter(index)} className="dropdown-item">Thêm bước</button>
+                                    {stepsList.length > 1 && (
+                                      <button type="button" onClick={() => removeStep(index)} className="dropdown-item delete-item">Xóa bước này</button>
+                                    )}
                                   </div>
-                                ) : (
-                                  <label className="upload-box">
-                                    <input type="file" accept="image/*" onChange={(e) => updateStepImage(index, e.target.files?.[0])} style={{ display: 'none' }} />
-                                    <span className="upload-icon">📷</span>
-                                  </label>
                                 )}
                               </div>
-                              <textarea placeholder="Mô tả bước thực hiện" value={step.text} onChange={(e) => updateStepText(index, e.target.value)} className="step-textarea" rows="3" />
-                              {stepsList.length > 1 && (
-                                <button type="button" onClick={() => removeStep(index)} className="menu-btn" title="Xóa bước">🗑️</button>
-                              )}
+                            </div>
+                            <div className="step-image-row">
+                              <div className="step-image-gallery">
+                                {step.previews && step.previews.length > 0 ? (
+                                  <div className="step-images-container">
+                                    {step.previews.map((preview, imgIndex) => (
+                                      <div key={imgIndex} className="step-image-preview">
+                                        <img src={preview} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                                        <button
+                                          type="button"
+                                          onClick={() => removeStepImage(index, imgIndex)}
+                                          className="remove-image-btn"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <label className="step-upload-box">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(e) => updateStepImage(index, e.target.files)}
+                                    style={{ display: 'none' }}
+                                  />
+                                  <span className="upload-icon">📷</span>
+                                </label>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -277,8 +392,8 @@ function EditRecipe() {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={() => navigate(-1)} className="btn-delete">❌ Hủy</button>
-            <button type="submit" disabled={loading} className="btn-publish">{loading ? "⏳ Đang lưu..." : "💾 Lưu"}</button>
+            <button type="button" onClick={() => navigate(-1)} className="btn-cancel">Hủy</button>
+            <button type="submit" disabled={loading} className="btn-publish">{loading ? "⏳ Đang lưu..." : "Đăng bài"}</button>
           </div>
         </form>
       </div>
