@@ -19,6 +19,9 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Sửa công thức (chỉ tác giả)
 -  Xóa công thức (chỉ tác giả)
 -  Upload ảnh với Cloudinary
+-  Upload ảnh từng bước của công thức
+-  Hiển thị ảnh từng bước trong cách làm
+-  Đếm lượt xem công thức (chặn spam 1 view/IP/1 phút)
 
 #### **Tìm Kiếm & Lọc**
 -  Tìm kiếm công thức theo tiêu đề
@@ -49,6 +52,10 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Responsive design (PC, tablet, mobile)
 -  UI hiện đại và dễ sử dụng
 -  Gradient colors và animations
+-  Tùy chỉnh giao diện (chọn màu chủ đạo, ảnh nền)
+-  Chia sẻ theme (export/import JSON)
+-  Thị trường theme công khai
+-  Dark mode support
 
 ---
 
@@ -67,6 +74,7 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 - **JWT** - Authentication
 - **Bcrypt** - Password hashing
 - **Cloudinary** - Image upload
+- **@hello-pangea/dnd** - Drag and drop (ingredients, steps)
 
 ---
 
@@ -134,8 +142,11 @@ GET  /recipe/detail/:id     - Chi tiết công thức
 POST /recipe/create         - Tạo công thức
 PUT  /recipe/update/:id     - Cập nhật công thức
 DELETE /recipe/delete/:id   - Xóa công thức
+POST /recipe/upload-step-images/:id  - Upload ảnh từng bước
+DELETE /recipe/delete-step-image/:id/:imageId - Xóa ảnh bước
 GET  /recipe/search?q=      - Tìm kiếm
 GET  /recipe/my             - Công thức của tôi
+POST /recipe/view/:id       - Đếm view (chống spam IP)
 ```
 
 ### Comments
@@ -184,6 +195,15 @@ GET  /admin/recipes         - Danh sách công thức
 GET  /admin/users           - Danh sách người dùng
 DELETE /admin/delete/:id    - Xóa công thức
 DELETE /admin/user/:id      - Xóa người dùng
+```
+
+### Theme
+```
+GET  /theme/preferences     - Lấy theme preferences
+POST /theme/preferences     - Lưu theme preferences
+GET  /theme/export          - Export theme JSON
+POST /theme/share           - Chia sẻ theme công khai
+GET  /theme/marketplace     - Danh sách theme chia sẻ
 ```
 
 ---
@@ -253,13 +273,17 @@ DoAnChuyenNganh/
 - [x] Danh sách yêu thích (Favorites)
 - [x] Bình luận lồng nhau (nested comments)
 - [x] Trang cá nhân người dùng
+- [x] Ảnh từng bước của công thức
+- [x] Tùy chỉnh giao diện (theme customization)
+- [x] Chia sẻ theme (export/import JSON)
+- [x] Thị trường theme công khai
+- [x] View counter với spam protection
 - [ ] Lọc theo danh mục
 - [ ] Tạo collection công thức
 - [ ] Chia sẻ công thức qua mạng xã hội
 - [ ] Thông báo (notifications)
 - [ ] Chat giữa users
 - [ ] Điều chỉnh ngôn ngữ
-- [ ] Mode tối/sáng
 
 ---
 
@@ -276,8 +300,12 @@ DoAnChuyenNganh/
 
 - Tất cả mật khẩu được mã hóa bằng **bcrypt**
 - JWT token hết hạn sau **7 ngày**
-- Ảnh được upload lên **Cloudinary**
+- Ảnh được upload lên **Cloudinary** hoặc lưu **local**
 - Database sử dụng **MySQL**
+- View count chặn spam: **1 view/IP/1 phút**
+- Theme được lưu trên **server** (user_theme_preferences table)
+- Hỗ trợ **drag & drop** sắp xếp nguyên liệu và bước làm
+- Body size limit: **50MB** cho base64 images
 
 ---
 
