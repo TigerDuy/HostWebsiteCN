@@ -19,6 +19,8 @@ import Search from "./pages/Search";
 import FavoriteRecipes from "./pages/FavoriteRecipes";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EditRecipe from "./pages/EditRecipe";
+import Notifications from "./pages/Notifications";
+import AdminReports from "./pages/AdminReports";
 import { useThemeLoader } from "./hooks/useThemeLoader";
 
 function App() {
@@ -50,6 +52,8 @@ function App() {
         <Route path="/customize" element={<ProtectedRoute><ThemeCustomization /></ProtectedRoute>} />
         <Route path="/theme-marketplace" element={<ProtectedRoute><ThemeMarketplace /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

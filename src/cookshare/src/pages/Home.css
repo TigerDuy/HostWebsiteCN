@@ -122,6 +122,7 @@
   transition: all 0.3s ease;
   text-decoration: none;
   cursor: pointer;
+  display: block;
 }
 
 .recipe-card-overlay:hover {

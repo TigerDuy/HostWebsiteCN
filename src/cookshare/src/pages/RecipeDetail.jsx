@@ -1,12 +1,34 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import ReportButton from "../components/ReportButton";
 import "./RecipeDetail.css";
 
 function RecipeDetail() {
   const params = useParams();
-  const id = String(params.id || "");
+  const location = useLocation();
+
+  // Normalize recipe id in case a whole object was accidentally passed into the URL
+  const id = useMemo(() => {
+    const rawFromParams = params.id;
+    const rawFromState = location.state?.recipeId || location.state?.recipe_id || location.state?.recipe?.id;
+    const rawId = rawFromParams ?? rawFromState;
+
+    if (rawId === undefined || rawId === null) return "";
+    if (typeof rawId === "object") {
+      if ("id" in rawId) return String(rawId.id || "");
+      if ("recipe_id" in rawId) return String(rawId.recipe_id || "");
+      if ("value" in rawId) return String(rawId.value || "");
+      return "";
+    }
+    const asString = String(rawId);
+    if (asString === "[object Object]" || asString === "undefined" || asString === "null") {
+      return "";
+    }
+    return asString;
+  }, [location.state, params.id]);
   const navigate = useNavigate();
+  const API_BASE = useMemo(() => process.env.REACT_APP_API_BASE || 'http://localhost:3001', []);
   const viewCountedRef = useRef(false);
   const [recipe, setRecipe] = useState({});
   const [comments, setComments] = useState([]);
@@ -20,29 +42,37 @@ function RecipeDetail() {
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [showReportForm, setShowReportForm] = useState(null); // Track which report's reject form is open
+  const [rejectReasons, setRejectReasons] = useState({}); // Track reject reason for each report
+  const [processingReportId, setProcessingReportId] = useState(null);
 
   const fetchRecipeData = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      console.error("❌ RecipeDetail: missing or invalid recipe id", params.id, location.state);
+      return;
+    }
     try {
       const recipeRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/detail/${id}`
+        `${API_BASE}/recipe/detail/${id}`
       );
       setRecipe(recipeRes.data);
 
       const commentsRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${id}`
+        `${API_BASE}/recipe/comment/${id}`
       );
       setComments(commentsRes.data);
 
       const statsRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/stats/${id}`
+        `${API_BASE}/rating/stats/${id}`
       );
       setStats(statsRes.data);
 
       const token = localStorage.getItem("token");
       if (token) {
         const userRatingRes = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/user/${id}`,
+          `${API_BASE}/rating/user/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (userRatingRes.data.hasRated) {
@@ -55,14 +85,14 @@ function RecipeDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [API_BASE, id, location.state, params.id]);
 
   const checkFavorite = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/check/${id}`,
+          `${API_BASE}/favorite/check/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setIsFavorited(res.data.isFavorited);
@@ -70,28 +100,49 @@ function RecipeDetail() {
         console.error("❌ Lỗi kiểm tra yêu thích:", err);
       }
     }
-  }, [id]);
+  }, [API_BASE, id]);
 
   const checkFollowing = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (token && recipe.user_id) {
       try {
         const res = await axios.get(
-        // TODO: Follow endpoint chưa tạo
-        // `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/is-following/${recipe.user_id}`,
+          `${API_BASE}/follow/is-following/${recipe.user_id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setIsFollowing(res.data.isFollowing);
+        setIsFollowing(!!res.data.isFollowing);
       } catch (err) {
         console.error("❌ Lỗi kiểm tra theo dõi:", err);
       }
     }
-  }, [recipe.user_id]);
+  }, [API_BASE, recipe.user_id]);
+
+  const fetchReports = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    const userRole = localStorage.getItem("role");
+    
+    // Chỉ admin/moderator mới fetch báo cáo
+    if (token && (userRole === "admin" || userRole === "moderator")) {
+      try {
+        const res = await axios.get(
+          `${API_BASE}/report?status=pending`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // Lọc báo cáo cho bài viết này
+        const recipeReports = res.data?.filter(r => r.recipe_id === parseInt(id)) || [];
+        setReports(recipeReports);
+      } catch (err) {
+        console.error("❌ Lỗi lấy báo cáo:", err);
+      }
+    }
+  }, [API_BASE, id]);
 
   useEffect(() => {
+    if (!id) return;
     fetchRecipeData();
     checkFavorite();
-  }, [fetchRecipeData, checkFavorite]);
+    fetchReports();
+  }, [fetchRecipeData, checkFavorite, fetchReports, id]);
 
   useEffect(() => {
     checkFollowing();
@@ -102,7 +153,7 @@ function RecipeDetail() {
     if (!recipe?.id || viewCountedRef.current) return;
     
     const controller = new AbortController();
-    fetch(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
+    fetch(`${API_BASE}/recipe/view/${recipe.id}`, { method: 'POST', signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && data.updated) {
@@ -114,7 +165,7 @@ function RecipeDetail() {
         viewCountedRef.current = true;
       });
     return () => controller.abort();
-  }, [recipe?.id]);
+  }, [API_BASE, recipe?.id]);
   const handleFavorite = async () => {
     const token = localStorage.getItem("token");
 
@@ -126,14 +177,14 @@ function RecipeDetail() {
 
     try {
       if (isFavorited) {
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${id}`, {
+        await axios.delete(`${API_BASE}/favorite/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Đã hủy yêu thích!");
         setIsFavorited(false);
       } else {
         await axios.post(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${id}`,
+          `${API_BASE}/favorite/${id}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -156,7 +207,7 @@ function RecipeDetail() {
 
     try {
       await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/rating/${id}`,
+        `${API_BASE}/rating/${id}`,
         { rating },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -185,7 +236,7 @@ function RecipeDetail() {
 
     try {
       await axios.post(
-        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment`,
+        `${API_BASE}/recipe/comment`,
         { recipe_id: id, comment: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -210,7 +261,7 @@ function RecipeDetail() {
     }
 
     axios.put(
-      `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}`,
+      `${API_BASE}/recipe/comment/${commentId}`,
       { comment: newText },
       { headers: { Authorization: `Bearer ${token}` } }
     )
@@ -234,7 +285,7 @@ function RecipeDetail() {
     }
 
     axios.delete(
-      `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/comment/${commentId}`,
+      `${API_BASE}/recipe/comment/${commentId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     .then(() => {
@@ -257,14 +308,14 @@ function RecipeDetail() {
 
     try {
       if (isFollowing) {
-        await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${recipe.user_id}`, {
+        await axios.delete(`${API_BASE}/follow/${recipe.user_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert("✅ Đã hủy theo dõi!");
         setIsFollowing(false);
       } else {
         await axios.post(
-          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/${recipe.user_id}`,
+          `${API_BASE}/follow/${recipe.user_id}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -272,7 +323,58 @@ function RecipeDetail() {
         setIsFollowing(true);
       }
     } catch (err) {
-      alert("❌ Lỗi xử lý theo dõi!");
+      const msg = err.response?.data?.message || "❌ Lỗi xử lý theo dõi!";
+      alert(msg);
+    }
+  };
+
+  const handleApproveReport = async (reportId) => {
+    if (processingReportId) return;
+    setProcessingReportId(reportId);
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API_BASE}/report/${reportId}/status`,
+        { status: "accepted" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Xác nhận báo cáo thành công!");
+      fetchReports();
+    } catch (err) {
+      console.error("❌ Lỗi xác nhận báo cáo:", err);
+      alert("❌ Lỗi xác nhận báo cáo!");
+    } finally {
+      setProcessingReportId(null);
+    }
+  };
+
+  const handleRejectReport = async (reportId) => {
+    const reason = rejectReasons[reportId];
+    if (!reason || !reason.trim()) {
+      alert("Vui lòng nhập lý do bác bỏ!");
+      return;
+    }
+
+    if (processingReportId) return;
+    setProcessingReportId(reportId);
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API_BASE}/report/${reportId}/status`,
+        { status: "rejected", rejectedReason: reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Bác bỏ báo cáo thành công!");
+      setShowReportForm(null);
+      setRejectReasons({});
+      fetchReports();
+    } catch (err) {
+      console.error("❌ Lỗi bác bỏ báo cáo:", err);
+      alert("❌ Lỗi bác bỏ báo cáo!");
+    } finally {
+      setProcessingReportId(null);
     }
   };
 
@@ -291,7 +393,14 @@ function RecipeDetail() {
     </div>
   );
 
-  if (loading) {
+  useEffect(() => {
+    if (!id) {
+      // Invalid id in URL -> redirect home to avoid dead view
+      navigate("/", { replace: true });
+    }
+  }, [id, navigate]);
+
+  if (loading || !id) {
     return <div className="detail-container"><h2>⏳ Đang tải...</h2></div>;
   }
 
@@ -393,12 +502,19 @@ function RecipeDetail() {
       </div>
 
       {/* ✅ YÊU THÍCH */}
-      <button
-        onClick={handleFavorite}
-        className={`favorite-btn ${isFavorited ? "favorited" : ""}`}
-      >
-        {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu vào yêu thích"}
-      </button>
+      <div className="action-buttons">
+        <button
+          onClick={handleFavorite}
+          className={`favorite-btn ${isFavorited ? "favorited" : ""}`}
+        >
+          {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu vào yêu thích"}
+        </button>
+        
+        {/* ✅ BÁO CÁO */}
+        {localStorage.getItem("userId") !== String(recipe.user_id) && (
+          <ReportButton recipeId={id} />
+        )}
+      </div>
 
       {/* NGUYÊN LIỆU */}
       <div className="section">
@@ -447,6 +563,126 @@ function RecipeDetail() {
       </div>
 
       <hr />
+
+      {/* ✅ BÁO CÁO (CHỈ ADMIN/MODERATOR) */}
+      {reports.length > 0 && (
+        <div className="reports-section" style={{
+          backgroundColor: "#fff3cd",
+          border: "2px solid #ffc107",
+          borderRadius: "8px",
+          padding: "20px",
+          marginBottom: "30px"
+        }}>
+          <h3>⚠️ Báo Cáo ({reports.length})</h3>
+          {reports.map((report) => (
+            <div key={report.id} style={{
+              backgroundColor: "#fff",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              padding: "15px",
+              marginBottom: "15px"
+            }}>
+              <div style={{ marginBottom: "10px" }}>
+                <p><strong>👤 Người báo cáo:</strong> {report.reporter_name || "Ẩn danh"}</p>
+                <p><strong>📝 Lý do:</strong> {report.reason}</p>
+                <p><strong>📅 Ngày báo cáo:</strong> {new Date(report.created_at).toLocaleString('vi-VN')}</p>
+                {report.processor_name && report.processed_at && (
+                  <>
+                    <p><strong>👨‍⚖️ Xử lý bởi:</strong> {report.processor_name}</p>
+                    <p><strong>⏰ Ngày xử lý:</strong> {new Date(report.processed_at).toLocaleString('vi-VN')}</p>
+                  </>
+                )}
+              </div>
+
+              {processingReportId === report.id ? (
+                <p style={{ color: "#666" }}>⏳ Đang xử lý...</p>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleApproveReport(report.id)}
+                    style={{
+                      backgroundColor: "#28a745",
+                      color: "white",
+                      border: "none",
+                      padding: "8px 15px",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      marginRight: "10px"
+                    }}
+                  >
+                    ✅ Xác Nhận
+                  </button>
+
+                  {showReportForm === report.id ? (
+                    <div style={{ marginTop: "10px" }}>
+                      <textarea
+                        placeholder="Nhập lý do bác bỏ..."
+                        value={rejectReasons[report.id] || ""}
+                        onChange={(e) => setRejectReasons({
+                          ...rejectReasons,
+                          [report.id]: e.target.value
+                        })}
+                        style={{
+                          width: "100%",
+                          padding: "10px",
+                          borderRadius: "4px",
+                          border: "1px solid #ddd",
+                          marginBottom: "10px"
+                        }}
+                        rows="3"
+                      />
+                      <button
+                        onClick={() => handleRejectReport(report.id)}
+                        style={{
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 15px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          marginRight: "10px"
+                        }}
+                      >
+                        🔴 Gửi Bác Bỏ
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowReportForm(null);
+                          setRejectReasons({});
+                        }}
+                        style={{
+                          backgroundColor: "#6c757d",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 15px",
+                          borderRadius: "4px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowReportForm(report.id)}
+                      style={{
+                        backgroundColor: "#dc3545",
+                        color: "white",
+                        border: "none",
+                        padding: "8px 15px",
+                        borderRadius: "4px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      ❌ Bác Bỏ
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* BÌNH LUẬN */}
       <div className="comment-box">

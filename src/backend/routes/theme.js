@@ -1,6 +1,6 @@
 const express = require("express");
 const db = require("../config/db");
-const { verifyToken } = require("../middleware/auth");
+const { verifyToken, verifyAdmin } = require("../middleware/auth");
 const router = express.Router();
 
 // 📥 Lấy theme preferences của user
@@ -128,9 +128,10 @@ router.get("/marketplace", verifyToken, (req, res) => {
       utp.background_image,
       utp.theme_name,
       utp.created_at,
-      u.username as created_by
+      u.username as created_by,
+      u.id as owner_id
     FROM user_theme_preferences utp
-    JOIN users u ON utp.user_id = u.id
+    JOIN nguoi_dung u ON utp.user_id = u.id
     WHERE utp.is_shared = TRUE
     ORDER BY utp.created_at DESC
     LIMIT 50`,
@@ -140,6 +141,59 @@ router.get("/marketplace", verifyToken, (req, res) => {
         return res.status(500).json({ message: "❌ Lỗi tải danh sách theme!" });
       }
       res.json(result || []);
+    }
+  );
+});
+
+// 🗑️ Xóa theme đã chia sẻ (chỉ chủ sở hữu hoặc admin)
+router.delete("/share/:id", verifyToken, (req, res, next) => {
+  const themeId = req.params.id;
+  const userId = req.user.id;
+
+  // Kiểm tra quyền sở hữu
+  db.query(
+    "SELECT user_id FROM user_theme_preferences WHERE id = ? AND is_shared = TRUE",
+    [themeId],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ message: "❌ Lỗi kiểm tra quyền xóa!" });
+      }
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy theme đã chia sẻ!" });
+      }
+
+      const themeOwnerId = rows[0].user_id;
+
+      // Check if user is owner or admin
+      db.query(
+        "SELECT role FROM nguoi_dung WHERE id = ?",
+        [userId],
+        (err, userRows) => {
+          if (err) {
+            return res.status(500).json({ message: "❌ Lỗi kiểm tra quyền!" });
+          }
+
+          const userRole = userRows[0]?.role;
+          const isAdmin = userRole === 'admin' || userRole === 'ADMIN' || userRole === 'Admin';
+          const isOwner = userId === themeOwnerId;
+
+          if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: "❌ Bạn không có quyền xóa theme này!" });
+          }
+
+          // Delete the theme share
+          db.query(
+            "UPDATE user_theme_preferences SET is_shared = FALSE WHERE id = ?",
+            [themeId],
+            (err) => {
+              if (err) {
+                return res.status(500).json({ message: "❌ Lỗi xóa chia sẻ theme!" });
+              }
+              res.json({ message: "✅ Đã hủy chia sẻ theme!" });
+            }
+          );
+        }
+      );
     }
   );
 });
