@@ -120,7 +120,12 @@ router.post("/login", (req, res) => {
         return res.status(400).json({ message: "Sai mật khẩu!" });
       }
 
-      const token = jwt.sign({ id: user.id }, SECRET_KEY, { expiresIn: "7d" });
+      // ✅ Thêm role vào JWT payload
+      const token = jwt.sign(
+        { id: user.id, role: user.role }, 
+        SECRET_KEY, 
+        { expiresIn: "7d" }
+      );
 
       return res.json({
         message: "Đăng nhập thành công!",

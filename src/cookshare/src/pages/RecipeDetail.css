@@ -225,10 +225,18 @@
   margin-top: 10px;
 }
 
+/* ACTION BUTTONS */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+
 /* FAVORITE BUTTON */
 .favorite-btn {
-  display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 200px;
   padding: 12px;
   background: white;
   border: 2px solid #ff7f50;
@@ -238,7 +246,6 @@
   cursor: pointer;
   font-size: 16px;
   transition: all 0.3s ease;
-  margin: 15px 0;
 }
 
 .favorite-btn:hover,

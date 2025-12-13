@@ -115,7 +115,7 @@ function Navbar() {
             <li><Link to="/my-recipes">📖 Công thức của tôi</Link></li>
             <li><Link to="/favorites">❤️ Công thức đã lưu</Link></li>
             <li><Link to="/create">➕ Tạo công thức</Link></li>
-            {role === "admin" && (
+            {(role === "admin" || role === "moderator") && (
               <li><Link to="/admin">⚙️ Trang quản trị</Link></li>
             )}
             {/* ✅ Dropdown menu */}
@@ -153,6 +153,22 @@ function Navbar() {
                       </div>
                     </div>
                   </Link>
+                  <Link 
+                    to="/notifications" 
+                    className="dropdown-item"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    🔔 Thông báo
+                  </Link>
+                  {(role === "admin" || role === "moderator") && (
+                    <Link 
+                      to="/admin/reports" 
+                      className="dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      ⚠️ Quản Lý Báo Cáo
+                    </Link>
+                  )}
                   <Link 
                     to="/customize" 
                     className="dropdown-item"

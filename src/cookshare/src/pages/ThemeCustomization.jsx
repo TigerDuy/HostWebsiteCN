@@ -14,11 +14,34 @@ function ThemeCustomization() {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Load from server
-    loadThemePreferences();
+    // Tự động tải giao diện từ tài khoản nếu có token, fallback sang localStorage
+    const init = async () => {
+      if (token) {
+        try {
+          const res = await axios.get(
+            `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const color = res.data.primary_color || localStorage.getItem('primaryColor') || '#ff7f50';
+          const bg = res.data.background_image || localStorage.getItem('backgroundImage') || '';
+          setPrimaryColor(color);
+          setBackgroundImage(bg);
+          setBackgroundPreview(bg);
+          applyTheme(color, bg);
+          return;
+        } catch {}
+      }
+      const savedColor = localStorage.getItem('primaryColor') || '#ff7f50';
+      const savedBg = localStorage.getItem('backgroundImage') || '';
+      setPrimaryColor(savedColor);
+      setBackgroundImage(savedBg);
+      setBackgroundPreview(savedBg);
+      applyTheme(savedColor, savedBg);
+    };
+    init();
   }, []);
 
-  const loadThemePreferences = async () => {
+  const loadThemePreferencesFromAccount = async () => {
     try {
       const res = await axios.get(
         `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
@@ -29,13 +52,8 @@ function ThemeCustomization() {
       setBackgroundPreview(res.data.background_image || '');
       applyTheme(res.data.primary_color || '#ff7f50', res.data.background_image || '');
     } catch (err) {
-      console.warn('Không thể tải theme từ server, dùng localStorage');
-      const savedColor = localStorage.getItem('primaryColor') || '#ff7f50';
-      const savedBg = localStorage.getItem('backgroundImage') || '';
-      setPrimaryColor(savedColor);
-      setBackgroundImage(savedBg);
-      setBackgroundPreview(savedBg);
-      applyTheme(savedColor, savedBg);
+      setMessage('❌ Không thể tải giao diện từ tài khoản');
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
@@ -88,10 +106,38 @@ function ThemeCustomization() {
   };
 
   const handleSave = async () => {
+    // Lưu và tự đồng bộ lên tài khoản (nếu đăng nhập), đồng thời lưu local để giữ trải nghiệm offline
+    setIsSaving(true);
+    localStorage.setItem('primaryColor', primaryColor);
+    localStorage.setItem('backgroundImage', backgroundImage);
+    try {
+      if (token) {
+        await axios.post(
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
+          {
+            primary_color: primaryColor,
+            background_image: backgroundImage,
+            theme_name: 'Custom Theme'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setMessage('✅ Đã lưu và đồng bộ giao diện lên tài khoản!');
+      } else {
+        setMessage('✅ Đã lưu giao diện! (Bạn chưa đăng nhập)');
+      }
+    } catch (err) {
+      setMessage('❌ Lỗi đồng bộ lên tài khoản! Giao diện vẫn được lưu cục bộ.');
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveToAccount = async () => {
     setIsSaving(true);
     setMessage('');
     try {
-      const res = await axios.post(
+      await axios.post(
         `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/preferences`,
         {
           primary_color: primaryColor,
@@ -100,12 +146,10 @@ function ThemeCustomization() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage('✅ Đã lưu cài đặt giao diện!');
-      localStorage.setItem('primaryColor', primaryColor);
-      localStorage.setItem('backgroundImage', backgroundImage);
+      setMessage('✅ Đã đồng bộ giao diện lên tài khoản!');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('❌ Lỗi lưu cài đặt! Thử lại sau.');
+      setMessage('❌ Lỗi đồng bộ giao diện lên tài khoản!');
       console.error(err);
       setTimeout(() => setMessage(''), 3000);
     } finally {
@@ -302,13 +346,13 @@ function ThemeCustomization() {
             className="btn-save" 
             style={{ backgroundColor: primaryColor }}
           >
-            {isSaving ? '⏳ Đang lưu...' : '💾 Lưu Cài Đặt'}
+            {isSaving ? '⏳ Đang lưu...' : '💾 Lưu'}
           </button>
           <button onClick={handleReset} className="btn-reset">
-            🔄 Khôi Phục Mặc Định
+            🔄 Mặc Định
           </button>
           <button onClick={handleExportTheme} className="btn-export">
-            📤 Xuất Giao Diện
+            📤 Xuất
           </button>
           <input
             type="file"
@@ -319,10 +363,10 @@ function ThemeCustomization() {
             style={{ display: 'none' }}
           />
           <label htmlFor="theme-import" className="btn-import">
-            📥 Nhập Giao Diện
+            📥 Nhập
           </label>
           <button onClick={() => setShowShareDialog(true)} className="btn-share">
-            🌐 Chia Sẻ Theme
+            🌐 Chia Sẻ
           </button>
         </div>
 

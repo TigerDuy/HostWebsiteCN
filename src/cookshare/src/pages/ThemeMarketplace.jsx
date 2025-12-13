@@ -73,6 +73,23 @@ function ThemeMarketplace() {
     URL.revokeObjectURL(url);
   };
 
+  const deleteSharedTheme = async (theme) => {
+    try {
+      const res = await axios.delete(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/theme/share/${theme.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessage(res.data.message || '✅ Đã xóa chia sẻ theme');
+      // Reload list
+      await loadSharedThemes();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('❌ Không thể xóa chia sẻ theme');
+      console.error(err);
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="marketplace-container">
@@ -98,50 +115,72 @@ function ThemeMarketplace() {
           </div>
         ) : (
           <div className="themes-grid">
-            {themes.map((theme) => (
-              <div key={theme.id} className="theme-card">
-                <div 
-                  className="theme-preview" 
-                  style={{ backgroundColor: theme.primary_color }}
-                >
-                  {theme.background_image && (
-                    <img 
-                      src={theme.background_image} 
-                      alt={theme.theme_name}
-                      className="preview-bg"
-                    />
-                  )}
-                  <div className="preview-overlay">
-                    <div className="preview-text">Preview</div>
-                  </div>
-                </div>
-
-                <div className="theme-info">
-                  <h3>{theme.theme_name}</h3>
-                  <p className="theme-color">Màu: {theme.primary_color}</p>
-                  <p className="theme-author">Tạo bởi: {theme.created_by}</p>
-                  <p className="theme-date">
-                    {new Date(theme.created_at).toLocaleDateString('vi-VN')}
-                  </p>
-                </div>
-
-                <div className="theme-actions">
-                  <button 
-                    onClick={() => applyTheme(theme)}
-                    className="btn-apply"
+            {themes.map((theme) => {
+              const storedUserId = localStorage.getItem('userId');
+              const storedRole = localStorage.getItem('role');
+              const currentUserId = storedUserId ? Number(storedUserId) : null;
+              const isAdmin = storedRole === 'admin' || storedRole === 'ADMIN' || storedRole === 'Admin';
+              const canDelete = Boolean(isAdmin || (currentUserId && theme.owner_id === currentUserId));
+              console.log('Theme Debug:', { 
+                themeName: theme.theme_name, 
+                ownerId: theme.owner_id, 
+                currentUserId, 
+                isAdmin, 
+                canDelete 
+              });
+              return (
+                <div key={theme.id} className="theme-card">
+                  <div 
+                    className="theme-preview" 
                     style={{ backgroundColor: theme.primary_color }}
                   >
-                    ✅ Áp Dụng
-                  </button>
-                  <button 
-                    onClick={() => downloadThemeAsJson(theme)}
-                    className="btn-download"
-                  >
-                    📥 Tải JSON
-                  </button>
+                    {theme.background_image && (
+                      <img 
+                        src={theme.background_image} 
+                        alt={theme.theme_name}
+                        className="preview-bg"
+                      />
+                    )}
+                    <div className="preview-overlay">
+                      <div className="preview-text">Preview</div>
+                    </div>
+                  </div>
+
+                  <div className="theme-info">
+                    <h3>{theme.theme_name}</h3>
+                    <p className="theme-color">Màu: {theme.primary_color}</p>
+                    <p className="theme-author">Tạo bởi: {theme.created_by}</p>
+                    <p className="theme-date">
+                      {new Date(theme.created_at).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+
+                  <div className="theme-actions">
+                    <button 
+                      onClick={() => applyTheme(theme)}
+                      className="btn-apply"
+                      style={{ backgroundColor: theme.primary_color }}
+                    >
+                      ✅ Áp Dụng
+                    </button>
+                    <button 
+                      onClick={() => downloadThemeAsJson(theme)}
+                      className="btn-download"
+                    >
+                      📥 Tải JSON
+                    </button>
+                    {canDelete && (
+                      <button 
+                        onClick={() => deleteSharedTheme(theme)}
+                        className="btn-delete"
+                      >
+                        🗑️ Hủy Chia Sẻ
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

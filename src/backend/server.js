@@ -39,6 +39,14 @@ app.use("/follow", followRoutes);
 const themeRoutes = require("./routes/theme");
 app.use("/theme", themeRoutes);
 
+// ✅ Thêm route báo cáo
+const reportRoutes = require("./routes/report");
+app.use("/report", reportRoutes);
+
+// ✅ Thêm route thông báo
+const notificationRoutes = require("./routes/notification");
+app.use("/notification", notificationRoutes);
+
 // ✅ Start server
 app.listen(3001, () => {
   console.log("✅ Backend đang chạy tại http://localhost:3001");

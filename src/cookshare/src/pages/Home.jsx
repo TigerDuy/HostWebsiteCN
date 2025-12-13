@@ -67,35 +67,34 @@ function Home() {
             <h3 className="section-title">📌 Công Thức Nổi Bật</h3>
             <div className="recipe-grid-overlay">
               {recipes.slice(0, 4).map((recipe) => (
-                <Link
-                  to={`/recipe/${recipe.id}`}
-                  key={recipe.id}
-                  className="recipe-card-overlay"
-                >
-                  <div className="recipe-overlay-img">
-                    {recipe.image_url ? (
-                      (recipe.image_url.toLowerCase().includes('.mp4') || 
-                      recipe.image_url.toLowerCase().includes('.webm') ||
-                      recipe.image_url.toLowerCase().includes('.avi') ||
-                      recipe.image_url.toLowerCase().includes('.mov')) ? (
-                        <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Link
+                    key={recipe.id}
+                    to={`/recipe/${recipe.id}`}
+                    className="recipe-card-overlay">
+                    <div className="recipe-overlay-img">
+                      {recipe.image_url ? (
+                        (recipe.image_url.toLowerCase().includes('.mp4') || 
+                        recipe.image_url.toLowerCase().includes('.webm') ||
+                        recipe.image_url.toLowerCase().includes('.avi') ||
+                        recipe.image_url.toLowerCase().includes('.mov')) ? (
+                          <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <img src={recipe.image_url} alt={recipe.title} />
+                        )
                       ) : (
-                        <img src={recipe.image_url} alt={recipe.title} />
-                      )
-                    ) : (
-                      <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
-                    )}
-                  </div>
-                  <div className="recipe-overlay-content">
-                    <h4>{recipe.title}</h4>
-                    <p className="recipe-overlay-author">{recipe.username}</p>
-                    <div className="recipe-overlay-meta">
-                      <span className="recipe-overlay-rating">⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
-                      <span className="recipe-overlay-views">👁️ {recipe.views || 0}</span>
-                      <span className="recipe-overlay-favs">❤️ {recipe.favorite_count || 0}</span>
+                        <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
+                      )}
                     </div>
-                  </div>
-                </Link>
+                    <div className="recipe-overlay-content">
+                      <h4>{recipe.title}</h4>
+                      <p className="recipe-overlay-author">{recipe.username}</p>
+                      <div className="recipe-overlay-meta">
+                        <span className="recipe-overlay-rating">⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
+                        <span className="recipe-overlay-views">👁️ {recipe.views || 0}</span>
+                        <span className="recipe-overlay-favs">❤️ {recipe.favorite_count || 0}</span>
+                      </div>
+                    </div>
+                  </Link>
               ))}
             </div>
           </section>
@@ -105,36 +104,36 @@ function Home() {
             <h3 className="section-title">🍽️ Tất Cả Công Thức</h3>
             <div className="recipe-grid-overlay">
               {recipes.map((recipe) => (
-                <Link
-                  to={`/recipe/${recipe.id}`}
-                  key={recipe.id}
-                  className="recipe-card-overlay"
-                >
-                  <div className="recipe-overlay-img">
-                    {recipe.image_url ? (
-                      (recipe.image_url.toLowerCase().includes('.mp4') || 
-                      recipe.image_url.toLowerCase().includes('.webm') ||
-                      recipe.image_url.toLowerCase().includes('.avi') ||
-                      recipe.image_url.toLowerCase().includes('.mov')) ? (
-                        <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Link
+                    key={recipe.id}
+                    to={`/recipe/${recipe.id}`}
+                    className="recipe-card-overlay">
+                    <div className="recipe-overlay-img">
+                      {recipe.image_url ? (
+                        (recipe.image_url.toLowerCase().includes('.mp4') || 
+                        recipe.image_url.toLowerCase().includes('.webm') ||
+                        recipe.image_url.toLowerCase().includes('.avi') ||
+                        recipe.image_url.toLowerCase().includes('.mov')) ? (
+                          <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <img src={recipe.image_url} alt={recipe.title} />
+                        )
                       ) : (
-                        <img src={recipe.image_url} alt={recipe.title} />
-                      )
-                    ) : (
-                      <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
-                    )}
-                  </div>
-                  <div className="recipe-overlay-content">
-                    <h4>{recipe.title}</h4>
-                    <p className="recipe-overlay-author">{recipe.username}</p>
-                    <div className="recipe-overlay-meta">
-                      <span className="recipe-overlay-rating">⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
-                      <span className="recipe-overlay-views">👁️ {recipe.views || 0}</span>
-                      <span className="recipe-overlay-favs">❤️ {recipe.favorite_count || 0}</span>
+                        <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
+                      )}
                     </div>
-                  </div>
-                </Link>
-              ))}
+                    <div className="recipe-overlay-content">
+                      <h4>{recipe.title}</h4>
+                      <p className="recipe-overlay-author">{recipe.username}</p>
+                      <div className="recipe-overlay-meta">
+                        <span className="recipe-overlay-rating">⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
+                        <span className="recipe-overlay-views">👁️ {recipe.views || 0}</span>
+                        <span className="recipe-overlay-favs">❤️ {recipe.favorite_count || 0}</span>
+                      </div>
+                    </div>
+                  </Link>
+
+              ))}}
             </div>
           </section>
         </>

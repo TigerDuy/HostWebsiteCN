@@ -120,6 +120,11 @@
 
 .role-badge.user {
   background-color: #28a745;
+
+  .role-badge.moderator {
+    background-color: #6f42c1;
+    color: white;
+  }
   color: white;
 }
 
@@ -136,9 +141,143 @@
   font-size: 12px;
 }
 
+.role-select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.role-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-delete:hover {
   background-color: #8b0000;
   transform: scale(1.05);
+}
+
+.btn-notify {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.btn-notify:hover {
+  background-color: #138496;
+  transform: scale(1.05);
+}
+
+.btn-role {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.btn-role:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+.btn-reset-pwd {
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.btn-reset-pwd:hover:not(:disabled) {
+  background-color: #e0a800;
+  transform: scale(1.05);
+}
+
+.restricted-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.restricted-badge {
+  background: #ffc107;
+  color: #212529;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.restricted-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.btn-reset-pwd:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal đơn giản dùng lại cho gửi thông báo */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: min(520px, 90vw);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-primary {
+  background-color: #ff7f50;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* EMPTY MESSAGE */
