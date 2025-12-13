@@ -210,7 +210,7 @@ router.get("/detail/:id", (req, res) => {
 
 // ✅ API thêm bình luận
 router.post("/comment", verifyToken, (req, res) => {
-  const { recipe_id, comment } = req.body;
+  const { recipe_id, comment, parent_comment_id } = req.body;
   const user_id = req.user.id;
 
   if (!comment || !recipe_id) {
@@ -218,29 +218,52 @@ router.post("/comment", verifyToken, (req, res) => {
   }
 
   db.query(
-    "INSERT INTO binh_luan (recipe_id, user_id, comment, created_at) VALUES (?, ?, ?, NOW())",
-    [recipe_id, user_id, comment],
-    (err) => {
+    "INSERT INTO binh_luan (recipe_id, user_id, comment, parent_comment_id, created_at) VALUES (?, ?, ?, ?, NOW())",
+    [recipe_id, user_id, comment, parent_comment_id || null],
+    (err, result) => {
       if (err) return res.status(500).json({ message: "❌ Lỗi khi thêm bình luận!" });
-      res.json({ message: "✅ Đã gửi bình luận!" });
+      res.json({ message: "✅ Đã gửi bình luận!", id: result.insertId });
     }
   );
 });
 
-// ✅ API lấy danh sách bình luận
+// ✅ API lấy danh sách bình luận (nested)
 router.get("/comment/:id", (req, res) => {
   const recipeId = req.params.id;
 
   db.query(
-    `SELECT binh_luan.*, nguoi_dung.username, nguoi_dung.avatar_url
+    `SELECT binh_luan.*, nguoi_dung.username, nguoi_dung.avatar_url,
+     (SELECT COUNT(*) FROM comment_likes WHERE comment_id = binh_luan.id) as like_count,
+     (SELECT COUNT(*) > 0 FROM comment_likes WHERE comment_id = binh_luan.id AND user_id = ?) as user_liked
      FROM binh_luan 
      JOIN nguoi_dung ON binh_luan.user_id = nguoi_dung.id
      WHERE recipe_id = ?
-     ORDER BY binh_luan.created_at DESC`,
-    [recipeId],
+     ORDER BY binh_luan.created_at ASC`,
+    [req.query.userId || 0, recipeId],
     (err, result) => {
       if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy bình luận!" });
-      res.json(result);
+      
+      // Build nested structure
+      const commentsMap = {};
+      const rootComments = [];
+      
+      result.forEach(comment => {
+        comment.replies = [];
+        commentsMap[comment.id] = comment;
+      });
+      
+      result.forEach(comment => {
+        if (comment.parent_comment_id) {
+          const parent = commentsMap[comment.parent_comment_id];
+          if (parent) {
+            parent.replies.push(comment);
+          }
+        } else {
+          rootComments.push(comment);
+        }
+      });
+      
+      res.json(rootComments);
     }
   );
 });
@@ -308,6 +331,43 @@ router.delete("/comment/:id", verifyToken, (req, res) => {
           res.json({ message: "✅ Đã xóa bình luận!" });
         }
       );
+    }
+  );
+});
+
+// ✅ API like/unlike comment
+router.post("/comment/:id/like", verifyToken, (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.user.id;
+
+  // Check if already liked
+  db.query(
+    "SELECT id FROM comment_likes WHERE comment_id = ? AND user_id = ?",
+    [commentId, userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra like!" });
+
+      if (result.length > 0) {
+        // Unlike
+        db.query(
+          "DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?",
+          [commentId, userId],
+          (err) => {
+            if (err) return res.status(500).json({ message: "❌ Lỗi unlike!" });
+            res.json({ liked: false });
+          }
+        );
+      } else {
+        // Like
+        db.query(
+          "INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)",
+          [commentId, userId],
+          (err) => {
+            if (err) return res.status(500).json({ message: "❌ Lỗi like!" });
+            res.json({ liked: true });
+          }
+        );
+      }
     }
   );
 });

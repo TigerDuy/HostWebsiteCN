@@ -37,6 +37,8 @@ function RecipeDetail() {
     totalRatings: 0,
   });
   const [commentText, setCommentText] = useState("");
+  const [replyTexts, setReplyTexts] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null);
   const [userRating, setUserRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,8 +61,9 @@ function RecipeDetail() {
       );
       setRecipe(recipeRes.data);
 
+      const userId = localStorage.getItem("userId") || 0;
       const commentsRes = await axios.get(
-        `${API_BASE}/recipe/comment/${id}`
+        `${API_BASE}/recipe/comment/${id}?userId=${userId}`
       );
       setComments(commentsRes.data);
 
@@ -220,7 +223,7 @@ function RecipeDetail() {
     }
   };
 
-  const handleComment = async () => {
+  const handleComment = async (parentId = null) => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -229,7 +232,8 @@ function RecipeDetail() {
       return;
     }
 
-    if (!commentText.trim()) {
+    const text = parentId ? (replyTexts[parentId] || "") : commentText;
+    if (!text.trim()) {
       alert("❌ Vui lòng nhập bình luận!");
       return;
     }
@@ -237,15 +241,40 @@ function RecipeDetail() {
     try {
       await axios.post(
         `${API_BASE}/recipe/comment`,
-        { recipe_id: id, comment: commentText },
+        { recipe_id: id, comment: text, parent_comment_id: parentId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setCommentText("");
+      if (parentId) {
+        setReplyTexts(prev => ({ ...prev, [parentId]: "" }));
+        setReplyingTo(null);
+      } else {
+        setCommentText("");
+      }
       alert("✅ Gửi bình luận thành công!");
       fetchRecipeData();
     } catch (err) {
       alert("❌ Lỗi gửi bình luận!");
+    }
+  };
+
+  const handleLike = async (commentId) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("❌ Bạn cần đăng nhập để thích bình luận!");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API_BASE}/recipe/comment/${commentId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchRecipeData();
+    } catch (err) {
+      console.error("❌ Lỗi like:", err);
     }
   };
 
@@ -686,51 +715,127 @@ function RecipeDetail() {
 
       {/* BÌNH LUẬN */}
       <div className="comment-box">
-        <h3>💬 Bình Luận ({comments.length})</h3>
+        <h3>💬 Bình Luận ({comments.reduce((count, c) => count + 1 + (c.replies?.length || 0), 0)})</h3>
 
         {comments.length > 0 ? (
           <ul className="comments-list">
             {comments.map((c) => (
-              <li key={c.id} className="comment-item">
-                <div className="comment-header">
-                  <div className="comment-author-info">
-                    {c.avatar_url ? (
-                      <img src={c.avatar_url} alt={c.username} className="comment-avatar" />
-                    ) : (
-                      <div className="comment-avatar-placeholder">{(c.username || 'U').charAt(0).toUpperCase()}</div>
-                    )}
-                    <div className="comment-author-details">
-                      <b className="comment-author">{c.username}</b>
-                      <span className="comment-time">{new Date(c.created_at).toLocaleString('vi-VN')}</span>
-                    </div>
-                  </div>
-                  {parseInt(localStorage.getItem('userId'), 10) === c.user_id && (
-                    <div className="comment-actions">
-                      <button className="btn-edit-comment" onClick={() => handleEditComment(c.id, c.comment)}>✏️</button>
-                      <button className="btn-delete-comment" onClick={() => handleDeleteComment(c.id)}>🗑️</button>
-                    </div>
-                  )}
-                </div>
-                <p className="comment-text">{c.comment}</p>
-              </li>
+              <CommentItem 
+                key={c.id} 
+                comment={c} 
+                level={0}
+                replyingTo={replyingTo}
+                setReplyingTo={setReplyingTo}
+                replyTexts={replyTexts}
+                setReplyTexts={setReplyTexts}
+                handleComment={handleComment}
+                handleLike={handleLike}
+                handleEditComment={handleEditComment}
+                handleDeleteComment={handleDeleteComment}
+              />
             ))}
           </ul>
         ) : (
           <p className="no-comments">Chưa có bình luận nào</p>
         )}
 
-        <textarea
-          placeholder="📝 Nhập bình luận của bạn..."
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          className="comment-textarea"
-          rows="4"
-        />
-        <button className="btn-comment" onClick={handleComment}>
-          ✅ Gửi Bình Luận
-        </button>
+        <div className="comment-input-row">
+          <img 
+            src={recipe.avatar_url || "https://via.placeholder.com/32"}
+            alt={recipe.username}
+            className="comment-input-avatar"
+          />
+          <input
+            placeholder="Thêm bình luận"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleComment()}
+            className="comment-input"
+          />
+          <button className="comment-send" onClick={() => handleComment()} title="Gửi">
+            ➤
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+// Recursive Comment Component
+function CommentItem({ comment, level, replyingTo, setReplyingTo, replyTexts, setReplyTexts, handleComment, handleLike, handleEditComment, handleDeleteComment }) {
+  const currentUserId = parseInt(localStorage.getItem('userId'), 10);
+  const isReplying = replyingTo === comment.id;
+
+  return (
+    <li className="comment-item" style={{ marginLeft: `${level * 30}px` }}>
+      <div className="comment-header">
+        <div className="comment-author-info">
+          {comment.avatar_url ? (
+            <img src={comment.avatar_url} alt={comment.username} className="comment-avatar" />
+          ) : (
+            <div className="comment-avatar-placeholder">{(comment.username || 'U').charAt(0).toUpperCase()}</div>
+          )}
+          <div className="comment-author-details">
+            <b className="comment-author">{comment.username}</b>
+            <span className="comment-handle">@cook_{String(comment.user_id || '').padStart(6,'0')}</span>
+            <span className="comment-time">{new Date(comment.created_at).toLocaleString('vi-VN')}</span>
+          </div>
+        </div>
+        {currentUserId === comment.user_id && (
+          <div className="comment-actions">
+            <button className="btn-edit-comment" title="Chỉnh sửa" onClick={() => handleEditComment(comment.id, comment.comment)}>✏️</button>
+            <button className="btn-delete-comment" title="Xóa" onClick={() => handleDeleteComment(comment.id)}>🗑️</button>
+          </div>
+        )}
+      </div>
+      <p className="comment-text">{comment.comment}</p>
+
+      <div className="comment-footer">
+        <button 
+          className={`btn-like ${comment.user_liked ? 'liked' : ''}`}
+          title="Thích" 
+          onClick={() => handleLike(comment.id)}
+        >
+          {comment.user_liked ? '♥' : '♡'} {comment.like_count > 0 && comment.like_count}
+        </button>
+        <button className="btn-reply" title="Trả lời" onClick={() => setReplyingTo(isReplying ? null : comment.id)}>Trả lời</button>
+      </div>
+
+      {isReplying && (
+        <div className="reply-input-row">
+          <input
+            placeholder="Trả lời thư..."
+            value={replyTexts[comment.id] || ""}
+            onChange={(e) => setReplyTexts(prev => ({ ...prev, [comment.id]: e.target.value }))}
+            onKeyPress={(e) => e.key === 'Enter' && handleComment(comment.id)}
+            className="comment-input"
+          />
+          <button className="comment-send" onClick={() => handleComment(comment.id)} title="Gửi">
+            ➤
+          </button>
+        </div>
+      )}
+
+      {comment.replies && comment.replies.length > 0 && (
+        <ul className="replies-list">
+          {comment.replies.map(reply => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              level={level + 1}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              replyTexts={replyTexts}
+              setReplyTexts={setReplyTexts}
+              handleComment={handleComment}
+              handleLike={handleLike}
+              handleEditComment={handleEditComment}
+              handleDeleteComment={handleDeleteComment}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 

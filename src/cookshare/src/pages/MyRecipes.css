@@ -1,366 +1,179 @@
-/* ===== COOKPAD-INSPIRED MY RECIPES PAGE ===== */
-
-.my-recipes-container {
-  max-width: 100%;
+﻿.my-recipes-container {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0;
-  background: #fafafa;
-  background: none !important;
+  padding: 20px;
+  background-color: #f9f9f9;
   min-height: calc(100vh - 80px);
 }
 
-.my-recipes-content {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-
-.my-recipes-container h1 {
-  color: var(--primary-color, #ff7f50);
-  font-size: 30px;
-  font-weight: 600;
+.my-page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 30px;
   text-align: center;
-  margin-bottom: 40px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid var(--primary-color, #ff7f50);
 }
 
-/* ===== RECIPES GRID ===== */
-.recipes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 900px;
-  margin: 0 auto 40px;
+.my-recipes-container .recipe-grid-overlay {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
-/* ===== RECIPE CARD ===== */
-.recipe-item {
+.my-recipes-container .recipe-card-overlay {
+  position: relative;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8e8e8;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.recipe-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+.my-recipes-container .recipe-card-overlay:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-.recipe-item-img,
-.recipe-item video {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
+.my-recipes-container .recipe-card-overlay a {
+  text-decoration: none;
+  color: inherit;
   display: block;
 }
 
-.recipe-item-info {
-  padding: 24px;
-  flex: 1;
+.my-recipes-container .recipe-overlay-img {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  background: #ddd;
+}
+
+.my-recipes-container .recipe-overlay-img img,
+.my-recipes-container .recipe-overlay-img video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+  display: block;
+}
+
+.my-recipes-container .recipe-card-overlay:hover .recipe-overlay-img img,
+.my-recipes-container .recipe-card-overlay:hover .recipe-overlay-img video {
+  transform: scale(1.05);
+}
+
+.my-recipes-container .recipe-overlay-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 100%);
+  color: #f7f7f7;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  justify-content: flex-end;
 }
 
-.recipe-item-info h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  line-height: 1.4;
+.my-recipes-container .recipe-overlay-content h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.recipe-meta {
+.my-recipes-container .recipe-overlay-meta {
   display: flex;
-  align-items: center;
-  gap: 40px;
-  padding-top: 8px;
-  margin-top: 4px;
+  gap: 12px;
+  font-size: 14px;
+  color: #f0f0f0;
 }
 
-.recipe-meta .rating,
-.recipe-meta .views {
-  color: #666;
-  font-size: 13px;
+.my-recipes-container .recipe-overlay-rating,
+.my-recipes-container .recipe-overlay-views,
+.my-recipes-container .recipe-overlay-favs {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.recipe-meta .rating {
-  color: #ff8c42;
-  font-weight: 600;
-}
 
-.recipe-actions {
+.my-recipes-container .recipe-card-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: flex;
-  gap: 12px;
-  margin-top: auto;
+  gap: 8px;
+  z-index: 2;
 }
 
-.btn-view,
-.btn-edit,
-.btn-delete {
-  padding: 10px 24px;
+.my-recipes-container .btn-edit-card,
+.my-recipes-container .btn-delete-card {
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.my-recipes-container .btn-edit-card {
+  background: #4CAF50;
+  color: white;
+}
+
+.my-recipes-container .btn-edit-card:hover {
+  background: #45a049;
+  transform: scale(1.1);
+}
+
+.my-recipes-container .btn-delete-card {
+  background: #f44336;
+  color: white;
+}
+
+.my-recipes-container .btn-delete-card:hover {
+  background: #da190b;
+  transform: scale(1.1);
+}
+
+.my-recipes-container .empty-state {
   text-align: center;
-  display: inline-block;
-  white-space: nowrap;
-}
-
-.btn-view {
-  background: #ff7f50;
-  color: white;
-}
-
-.btn-view:hover {
-  background: #ff6347;
-  transform: translateY(-1px);
-}
-
-.btn-edit {
-  background: #27ae60;
-  color: white;
-}
-
-.btn-edit:hover {
-  background: #229954;
-  transform: translateY(-1px);
-}
-
-.btn-delete {
-  background: #e74c3c;
-  color: white;
-}
-
-.btn-delete:hover {
-  background: #c0392b;
-  transform: translateY(-1px);
-}
-
-/* ===== ROW LAYOUT (Alternative) ===== */
-.recipe-row {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 0;
+  padding: 60px 20px;
   background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e8e8e8;
-  transition: all 0.2s ease;
-  margin-bottom: 16px;
-  max-width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.recipe-row:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.recipe-row .recipe-img-col {
-  width: 260px;
-  height: 195px;
-  overflow: hidden;
-}
-
-.recipe-row .recipe-img-col img,
-.recipe-row .recipe-img-col video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.recipe-row .recipe-card-content {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.recipe-card-content h3 {
-  margin: 0 0 16px 0;
+.my-recipes-container .empty-state p {
   font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  line-height: 1.4;
+  color: #666;
+  margin-bottom: 20px;
 }
 
-/* ===== EDIT FORM ===== */
-.edit-two-column {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 24px;
-  padding: 20px;
-}
-
-.edit-media {
-  width: 300px;
-}
-
-.edit-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.edit-fields h3 {
-  margin: 0 0 12px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.edit-input,
-.edit-textarea {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s ease;
-  box-sizing: border-box;
-}
-
-.edit-input:focus,
-.edit-textarea:focus {
-  outline: none;
-  border-color: #ff7f50;
-}
-
-.edit-textarea {
-  resize: vertical;
-  min-height: 80px;
-  line-height: 1.6;
-}
-
-.edit-buttons {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.btn-save,
-.btn-cancel {
-  flex: 1;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-save {
-  background: #27ae60;
-  color: white;
-}
-
-.btn-save:hover {
-  background: #229954;
-  transform: translateY(-1px);
-}
-
-.btn-cancel {
-  background: #95a5a6;
-  color: white;
-}
-
-.btn-cancel:hover {
-  background: #7f8c8d;
-  transform: translateY(-1px);
-}
-
-/* ===== EMPTY STATE ===== */
-.empty-state {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.empty-message {
-  font-size: 18px;
-  color: #999;
-  margin-bottom: 24px;
-}
-
-.btn-create {
+.my-recipes-container .btn-create {
   display: inline-block;
-  padding: 14px 32px;
+  padding: 12px 30px;
   background: #ff7f50;
   color: white;
+  border-radius: 25px;
   text-decoration: none;
-  border-radius: 6px;
   font-weight: 600;
-  font-size: 15px;
-  transition: all 0.2s ease;
+  transition: all 0.3s;
 }
 
-.btn-create:hover {
+.my-recipes-container .btn-create:hover {
   background: #ff6347;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 127, 80, 0.3);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .my-recipes-content {
-    padding: 24px 16px;
-  }
-
-  .recipes-list {
-    gap: 16px;
-  }
-
-  .recipe-row {
-    grid-template-columns: 180px 1fr;
-  }
-
-  .recipe-row .recipe-img-col {
-    width: 180px;
-    height: 135px;
-  }
-
-  .recipe-row .recipe-card-content {
-    padding: 16px;
-    min-height: 135px;
-  }
-
-  .edit-two-column {
-    grid-template-columns: 1fr;
-  }
-
-  .edit-media {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .recipes-list {
-    grid-template-columns: 1fr;
-  }
-
-  .recipe-row {
-    grid-template-columns: 120px 1fr;
-  }
-
-  .recipe-row .recipe-img-col {
-    width: 120px;
-    height: 120px;
-  }
-
-  .recipe-actions {
-    flex-direction: column;
-  }
+  transform: scale(1.05);
 }

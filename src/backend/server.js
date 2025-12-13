@@ -8,6 +8,17 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Tăng giới hạn cho base64 images
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Debug helpers to trace unexpected exit/crash
+process.on('exit', (code) => {
+  console.log('⚠️ Process exit with code', code);
+});
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('🔥 Unhandled rejection:', reason);
+});
+
 // Serve uploaded files so local fallback images are accessible
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axios";
 import "./Notifications.css";
@@ -17,11 +17,7 @@ function Notifications() {
   const userRole = localStorage.getItem("role");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -47,7 +43,11 @@ function Notifications() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userRole]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const handleCancelReport = async (recipeId) => {
     if (!window.confirm("Bạn chắc chứ sẽ hủy báo cáo này?")) return;
@@ -58,7 +58,7 @@ function Notifications() {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("✅ Hủy báo cáo thành công!");
-      fetchReports();
+      fetchAll();
     } catch (err) {
       console.error("❌ Lỗi hủy báo cáo:", err);
       alert("❌ Lỗi hủy báo cáo!");
@@ -78,7 +78,7 @@ function Notifications() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("✅ Xác nhận báo cáo thành công!");
-      fetchReports();
+      fetchAll();
     } catch (err) {
       console.error("❌ Lỗi xác nhận:", err);
       alert("❌ Lỗi xác nhận báo cáo!");
@@ -106,7 +106,7 @@ function Notifications() {
       alert("✅ Bác bỏ báo cáo thành công!");
       setRejectReasonId(null);
       setRejectReason("");
-      fetchReports();
+      fetchAll();
     } catch (err) {
       console.error("❌ Lỗi bác bỏ:", err);
       alert("❌ Lỗi bác bỏ báo cáo!");
@@ -134,7 +134,14 @@ function Notifications() {
       fetchAll();
     } catch (err) {
       console.error("❌ Lỗi gửi phản hồi:", err);
-      alert("❌ Lỗi gửi phản hồi");
+      const msg = err?.response?.data?.message;
+      if (err?.response?.status === 409) {
+        alert("Thông báo này đã được phản hồi rồi");
+      } else if (err?.response?.status === 404) {
+        alert(msg || "Không tìm thấy thông báo hoặc bạn không phải người nhận");
+      } else {
+        alert(msg || "❌ Lỗi gửi phản hồi");
+      }
     } finally {
       setReplyingId(null);
     }
@@ -253,6 +260,8 @@ function Notifications() {
                 } catch (e) {
                   meta = {};
                 }
+                const alreadyReplied = meta.has_reply === true;
+                const isReplyNotif = item.type === "reply";
                 return (
                   <div key={item.id} className="notif-card">
                     <div className="notif-header">
@@ -280,21 +289,29 @@ function Notifications() {
                         </p>
                       )}
                     </div>
-                    <div className="notif-actions">
-                      <textarea
-                        value={replyContent[item.id] || ""}
-                        onChange={(e) => setReplyContent((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                        placeholder="Nhập phản hồi..."
-                        maxLength={500}
-                      />
-                      <button
-                        className="btn-admin-accept"
-                        onClick={() => handleReplyNotification(item.id)}
-                        disabled={replyingId === item.id}
-                      >
-                        {replyingId === item.id ? "⏳ Đang gửi..." : "📨 Gửi phản hồi"}
-                      </button>
-                    </div>
+                    {alreadyReplied || isReplyNotif ? (
+                      <p className="notif-hint">
+                        {isReplyNotif
+                          ? "💬 Đây là phản hồi từ người nhận."
+                          : "💬 Bạn đã phản hồi thông báo này."}
+                      </p>
+                    ) : (
+                      <div className="notif-actions">
+                        <textarea
+                          value={replyContent[item.id] || ""}
+                          onChange={(e) => setReplyContent((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          placeholder="Nhập phản hồi..."
+                          maxLength={500}
+                        />
+                        <button
+                          className="btn-admin-accept"
+                          onClick={() => handleReplyNotification(item.id)}
+                          disabled={replyingId === item.id}
+                        >
+                          {replyingId === item.id ? "⏳ Đang gửi..." : "📨 Gửi phản hồi"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
