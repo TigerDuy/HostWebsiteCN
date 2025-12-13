@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "../utils/axios";
 import "./AdminReports.css";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +10,7 @@ function AdminReports() {
   const [processingId, setProcessingId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(null);
+  const [warningStatus, setWarningStatus] = useState({}); // { [reportId]: { state, sent_at, reply } }
   const navigate = useNavigate();
   const userRole = localStorage.getItem("role");
   const username = localStorage.getItem("username") || "Quản trị";
@@ -23,6 +24,27 @@ function AdminReports() {
 
     fetchAllReports();
   }, [navigate, userRole]);
+
+  const fetchWarningStatuses = useCallback(async (reports) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      const promises = reports.map((r) =>
+        axios
+          .get(`/notification/report/${r.id}/status`, { headers })
+          .then((res) => ({ id: r.id, data: res.data }))
+          .catch(() => ({ id: r.id, data: { state: "none" } }))
+      );
+      const results = await Promise.all(promises);
+      const map = {};
+      results.forEach((item) => {
+        map[item.id] = item.data || { state: "none" };
+      });
+      setWarningStatus(map);
+    } catch (err) {
+      console.error("⚠️ Lỗi lấy trạng thái cảnh báo:", err);
+    }
+  }, []);
 
   const fetchAllReports = async () => {
     setLoading(true);
@@ -40,6 +62,7 @@ function AdminReports() {
       }
 
       setAllReports(allData);
+      fetchWarningStatuses(allData);
     } catch (err) {
       console.error("❌ Lỗi lấy báo cáo:", err);
       alert("❌ Lỗi lấy danh sách báo cáo!");
@@ -128,10 +151,22 @@ function AdminReports() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("✅ Đã gửi cảnh báo đến tác giả");
+      setWarningStatus((prev) => ({
+        ...prev,
+        [report.id]: { state: "waiting", sent_at: new Date().toISOString() },
+      }));
     } catch (err) {
       console.error("❌ Lỗi gửi cảnh báo:", err);
       alert("❌ Lỗi gửi cảnh báo");
     }
+  };
+
+  const handleViewReply = (reportId) => {
+    const status = warningStatus[reportId];
+    if (!status || !status.reply) return;
+    const { reply } = status;
+    const sentAt = new Date(reply.created_at).toLocaleString("vi-VN");
+    alert(`📨 Phản hồi từ ${reply.sender_name || "tác giả"} (${reply.sender_role || "user"})\n---\n${reply.message}\n---\nGửi lúc: ${sentAt}`);
   };
 
   if (loading) {
@@ -168,7 +203,11 @@ function AdminReports() {
       <div className="reports-section">
         {filteredReports.length > 0 ? (
           <div className="reports-list">
-            {filteredReports.map((report) => (
+            {filteredReports.map((report) => {
+              const warn = warningStatus[report.id] || { state: "none" };
+              const isWaiting = warn.state === "waiting";
+              const isReplied = warn.state === "replied";
+              return (
               <div key={report.id} className={`report-card report-${report.status}`}>
                 <div className="report-header">
                   <h3>📝 <Link to={`/recipe/${report.recipe_id}`} style={{ color: "inherit", textDecoration: "underline", cursor: "pointer" }}>{report.recipe_title}</Link></h3>
@@ -183,6 +222,11 @@ function AdminReports() {
                     <span className="report-count">
                       {report.total_reports_for_recipe} báo cáo
                     </span>
+                    {warn.state !== "none" && (
+                      <span className={`warning-status-pill warning-${warn.state}`}>
+                        {warn.state === "waiting" ? "⏳ Chờ phản hồi" : "💬 Đã phản hồi"}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -232,12 +276,22 @@ function AdminReports() {
 
                 {report.status === "pending" && (
                   <div className="report-actions">
-                    <button
-                      className="btn-notify-author"
-                      onClick={() => handleNotifyAuthor(report)}
-                    >
-                      🔔 Cảnh Báo Tác Giả
-                    </button>
+                    {isReplied ? (
+                      <button
+                        className="btn-notify-author btn-view-reply"
+                        onClick={() => handleViewReply(report.id)}
+                      >
+                        📨 Xem Phản Hồi
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-notify-author"
+                        onClick={() => handleNotifyAuthor(report)}
+                        disabled={isWaiting}
+                      >
+                        {isWaiting ? "⏳ Chờ phản hồi" : "🔔 Cảnh Báo Tác Giả"}
+                      </button>
+                    )}
                     <button
                       className="btn-approve"
                       onClick={() => handleApprove(report.id)}
@@ -286,7 +340,8 @@ function AdminReports() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+          })}
           </div>
         ) : (
           <p className="empty-message">

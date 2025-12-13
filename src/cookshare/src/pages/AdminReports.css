@@ -118,6 +118,23 @@
   align-items: center;
 }
 
+.warning-status-pill {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.warning-status-pill.warning-replied {
+  background: #e0f2fe;
+  color: #075985;
+  border-color: #7dd3fc;
+}
+
 .report-status {
   padding: 6px 12px;
   border-radius: 20px;
@@ -194,6 +211,20 @@
   color: white;
   box-shadow: 0 2px 8px rgba(243, 156, 18, 0.25);
   transition: all 0.3s ease;
+}
+
+.btn-notify-author:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-view-reply {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.btn-view-reply:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .btn-notify-author:hover {
