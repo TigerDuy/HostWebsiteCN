@@ -579,11 +579,16 @@ function RecipeDetail() {
               </div>
               {recipe.step_images_by_step && recipe.step_images_by_step[index] && recipe.step_images_by_step[index].length > 0 && (
                 <div className="step-display-images-gallery">
-                  {recipe.step_images_by_step[index].map((image, imgIndex) => (
-                    <div key={imgIndex} className="step-display-image">
-                      <img src={image} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
-                    </div>
-                  ))}
+                  {recipe.step_images_by_step[index].map((image, imgIndex) => {
+                    const src = typeof image === 'string' ? image : image?.image_url;
+                    return (
+                      <div key={imgIndex} className="step-display-image">
+                        {src ? (
+                          <img src={src} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -740,11 +745,19 @@ function RecipeDetail() {
         )}
 
         <div className="comment-input-row">
-          <img 
-            src={recipe.avatar_url || "https://via.placeholder.com/32"}
-            alt={recipe.username}
-            className="comment-input-avatar"
-          />
+          {(() => {
+            const currentUsername = localStorage.getItem('username') || '';
+            const currentAvatar = localStorage.getItem('avatar_url') || '';
+            const avatarSrc = currentAvatar || "https://via.placeholder.com/32";
+            const altText = currentUsername || 'Bạn';
+            return (
+              <img
+                src={avatarSrc}
+                alt={altText}
+                className="comment-input-avatar"
+              />
+            );
+          })()}
           <input
             placeholder="Thêm bình luận"
             value={commentText}
