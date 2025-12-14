@@ -31,7 +31,7 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Bình luận công thức
 -  Trả lời bình luận (nested comments)
 -  Sửa/xóa bình luận
--  Thích bình luận
+-  Thích bình luận (like/unlike)
 -  Sắp xếp bình luận (mới nhất, cũ nhất, được thích nhiều nhất)
 -  Đánh giá công thức (1-5 sao)
 -  Xem thống kê đánh giá (biểu đồ)
@@ -47,6 +47,11 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Xóa công thức
 -  Xóa người dùng
 -  Dashboard với thống kê
+-  Xem & xử lý báo cáo (report system)
+-  Hệ thống thông báo (notifications)
+-  Tùy chỉnh giao diện (theme customization)
+-  Chia sẻ theme với cộng đồng
+-  Hệ thống thông báo (notifications)
 
 #### **Giao Diện**
 -  Responsive design (PC, tablet, mobile)
@@ -137,16 +142,16 @@ POST /auth/login            - Đăng nhập
 
 ### Recipes
 ```
-GET  /recipe/list           - Danh sách công thức
-GET  /recipe/detail/:id     - Chi tiết công thức
-POST /recipe/create         - Tạo công thức
-PUT  /recipe/update/:id     - Cập nhật công thức
-DELETE /recipe/delete/:id   - Xóa công thức
-POST /recipe/upload-step-images/:id  - Upload ảnh từng bước
+GET  /recipe/list                          - Danh sách công thức
+GET  /recipe/detail/:id                    - Chi tiết công thức
+POST /recipe/create                        - Tạo công thức
+PUT  /recipe/update/:id                    - Cập nhật công thức
+DELETE /recipe/delete/:id                  - Xóa công thức
+POST /recipe/upload-step-images/:id        - Upload ảnh từng bước
 DELETE /recipe/delete-step-image/:id/:imageId - Xóa ảnh bước
-GET  /recipe/search?q=      - Tìm kiếm
-GET  /recipe/my             - Công thức của tôi
-POST /recipe/view/:id       - Đếm view (chống spam IP)
+GET  /recipe/search?q=                     - Tìm kiếm
+GET  /recipe/my                            - Công thức của tôi
+POST /recipe/view/:id                      - Đếm view (chống spam IP)
 ```
 
 ### Comments
@@ -195,6 +200,20 @@ GET  /admin/recipes         - Danh sách công thức
 GET  /admin/users           - Danh sách người dùng
 DELETE /admin/delete/:id    - Xóa công thức
 DELETE /admin/user/:id      - Xóa người dùng
+GET  /admin/reports         - Danh sách báo cáo
+```
+
+### Report System
+```
+POST /report/create         - Tạo báo cáo (recipe_id, reason, description)
+GET  /admin/reports         - Danh sách báo cáo (admin only)
+PUT  /report/:id            - Xử lý báo cáo (admin only, status: processing/resolved)
+```
+
+### Notifications
+```
+GET  /notification/list     - Danh sách thông báo
+POST /notification/mark-read/:id - Đánh dấu đã đọc
 ```
 
 ### Theme
@@ -266,7 +285,7 @@ DoAnChuyenNganh/
 
 ---
 
-##  Tính Năng Nâng Cao (Có thể thêm)
+##  Tính Năng Nâng Cao
 
 - [x] Follow người dùng
 - [x] Like bình luận
@@ -278,10 +297,11 @@ DoAnChuyenNganh/
 - [x] Chia sẻ theme (export/import JSON)
 - [x] Thị trường theme công khai
 - [x] View counter với spam protection
+- [x] Thông báo (notifications)
+- [x] Hệ thống báo cáo (report system)
 - [ ] Lọc theo danh mục
 - [ ] Tạo collection công thức
 - [ ] Chia sẻ công thức qua mạng xã hội
-- [ ] Thông báo (notifications)
 - [ ] Chat giữa users
 - [ ] Điều chỉnh ngôn ngữ
 
