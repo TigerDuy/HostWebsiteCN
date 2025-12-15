@@ -1,0 +1,112 @@
+Dưới đây là đề cương nội dung để bạn dựng file PPTX nhanh (15–18 slide). Bạn chỉ cần copy nội dung vào PowerPoint/Google Slides và áp dụng một template sạch (màu chủ đạo cam/than để hợp với CookShare).
+
+1) Trang bìa  
+- Tên đề tài: CookShare – Nền tảng chia sẻ công thức nấu ăn  
+- Sinh viên / Lớp / GVHD  
+- Ngày tháng
+
+2) Mục lục  
+- Tổng quan  
+- Kiến trúc & Công nghệ  
+- Tính năng chính  
+- Thiết kế CSDL & API  
+- Demo giao diện  
+- Kiểm thử & Hiệu năng  
+- Kết luận & Hướng phát triển
+
+3) Vấn đề & Mục tiêu  
+- Nhu cầu: chia sẻ/tìm kiếm công thức, tương tác cộng đồng  
+- Mục tiêu: CRUD công thức, bình luận lồng nhau, like bình luận, đánh giá, yêu thích, quản trị user/admin, responsive UI
+
+4) Kiến trúc tổng thể  
+- 3 tầng: React (frontend) – Express/Node (API) – MySQL (DB); ảnh Cloudinary  
+- Sơ đồ khối: Client → API Gateway/Express → MySQL + Cloudinary
+
+5) Công nghệ chính  
+- Frontend: React 19, React Router 6, Axios, CSS Grid/Flex  
+- Backend: Node 16+/Express 4, JWT, bcrypt, multer/Cloudinary SDK  
+- Database: MySQL 8 (FK, UNIQUE, CHECK)  
+- Bảo mật: JWT 7 ngày, Bcrypt, CORS hạn chế origin  
+- Triển khai: dev localhost:3000/3001
+
+6) Tính năng người dùng  
+- Đăng ký/đăng nhập (JWT)  
+- Tạo/Sửa/Xóa/Xem công thức, upload ảnh  
+- Bình luận lồng nhau (nested), thích bình luận (like), đánh giá sao, yêu thích  
+- Tìm kiếm, xem thống kê rating
+
+7) Tính năng admin  
+- Quản lý người dùng, đổi role user/admin  
+- Xóa công thức/bình luận vi phạm  
+- (Định hướng) Quản lý báo cáo, strike system
+
+8) Thiết kế CSDL  
+- Bảng chính: users, recipes, comments (parent_comment_id), ratings, favorites  
+- Bảng bổ sung: comment_likes, notifications, step_images  
+- Ràng buộc: FK ON DELETE CASCADE; UNIQUE (recipe_id,user_id) cho ratings/favorites/likes; CHECK rating 1–5
+
+9) Thiết kế API (rút gọn)  
+- Auth: POST /auth/register, /auth/login  
+- Recipe: GET /recipe/list, /recipe/search, POST /recipe/create, PUT /recipe/update/:id, DELETE /recipe/delete/:id  
+- Comment: POST /comment/:recipeId (hỗ trợ parent_comment_id), GET /recipe/comment/:id, POST /comment/:id/like, DELETE /comment/:id  
+- Notifications: GET /notifications  
+- Admin: GET /admin/users, PUT /admin/users/:id/role
+
+10) Flow bình luận lồng nhau & like  
+- Client gửi parent_comment_id khi reply  
+- API trả về cây comments với replies[], like_count, user_liked  
+- Toggle like qua POST /comment/:id/like (UNIQUE constraint)
+
+11) Giao diện (demo ảnh)  
+- Home: lưới thẻ công thức + search  
+- Recipe Detail: ảnh/video, nguyên liệu/bước, bình luận lồng nhau, like  
+- My Recipes / Favorite Recipes: card grid  
+- Admin Dashboard: danh sách user, đổi role, gỡ công thức
+
+12) Quy trình upload ảnh  
+- Frontend: FormData → Backend: multer → Cloudinary → lưu URL vào DB (recipes.image_url, step_images.image_url)  
+- Trình bày sơ đồ 4 bước
+
+13) Kiểm thử chức năng (sample)  
+- TC01 đăng ký, TC03 đăng nhập, TC05 tạo công thức, TC07 xóa công thức (owner)  
+- TC13 nested comment, TC15 like comment, TC19 lấy nested comments, TC20 notification on reply  
+- Trạng thái: Pass (manual)
+
+14) Hiệu năng (dev)  
+- /recipe/list ~80ms (50 recipes)  
+- /recipe/search ~120ms  
+- /comment/:id/like ~80ms  
+- /recipe/comment/:id ~150ms (2-level nested, ~50 comments)
+
+15) Bảo mật  
+- Hash mật khẩu bằng Bcrypt  
+- JWT 7 ngày, middleware verify + check role  
+- CORS giới hạn origin localhost:3000  
+- Không lưu plaintext password
+
+16) Hạn chế  
+- Chưa có realtime notifications (chưa dùng WebSocket)  
+- Chưa pagination/virtualization cho comment sâu  
+- Chưa cache Redis cho list/search  
+- Chưa test tự động, chưa CI/CD  
+- Chưa recommendation/SEO/accessibility tối ưu
+
+17) Hướng phát triển  
+- WebSocket realtime notifications  
+- Redis cache list/search  
+- Unit/Integration tests + CI/CD  
+- Pagination/virtualization cho comment tree; strike system ẩn comment vi phạm  
+- Gợi ý cá nhân hóa (ML), tối ưu SEO/accessibility
+
+18) Kết luận  
+- Hoàn thành chức năng cốt lõi: CRUD công thức, bình luận lồng nhau, like, rating, favorite, phân quyền user/admin, responsive UI  
+- Kiến trúc mở rộng: tách tầng, cloud storage, bảo mật cơ bản tốt  
+- Định hướng nâng cấp: realtime, cache, test/CI, personalization
+
+Gợi ý thiết kế slide:
+- Màu: nền trắng/ghi nhạt, điểm nhấn cam (#ff7f50) + than (#1f2933).  
+- Font: sans dễ đọc (Segoe UI/Roboto).  
+- Ít chữ, nhiều gạch đầu dòng; mỗi slide 4–6 bullet.  
+- Chèn 4–6 screenshot tiêu biểu (Home, Detail với bình luận lồng nhau, My/Favorites, Admin).  
+- Vẽ 1 sơ đồ kiến trúc, 1 sơ đồ flow upload ảnh.  
+- Bảng CSDL và API chỉ giữ 5–7 dòng quan trọng để tránh quá tải chữ.

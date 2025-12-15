@@ -20,9 +20,17 @@ router.post("/recipe/:id", verifyToken, (req, res) => {
       return res.status(404).json({ message: "❌ Bài viết không tồn tại!" });
     }
 
-    // Kiểm tra báo cáo chưa hoàn tất (pending hoặc accepted)
+    // Kiểm tra báo cáo gần đây (pending hoặc đã xử lý trong vòng 1 ngày)
     db.query(
-      "SELECT id, status FROM bao_cao WHERE recipe_id = ? AND user_id = ? AND status IN ('pending', 'accepted')",
+      `SELECT id, status, updated_at 
+       FROM bao_cao 
+       WHERE recipe_id = ? AND user_id = ? 
+       AND (
+         status = 'pending' 
+         OR (status IN ('accepted', 'rejected') AND updated_at > DATE_SUB(NOW(), INTERVAL 1 DAY))
+       )
+       ORDER BY updated_at DESC
+       LIMIT 1`,
       [recipeId, userId],
       (err, existingReports) => {
         if (err) {
@@ -30,27 +38,24 @@ router.post("/recipe/:id", verifyToken, (req, res) => {
         }
 
         if (existingReports.length > 0) {
-          return res.status(409).json({ message: "❌ Bạn đã báo cáo bài viết này rồi!" });
+          const report = existingReports[0];
+          if (report.status === 'pending') {
+            return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
+          } else {
+            return res.status(409).json({ message: "❌ Bạn đã báo cáo bài viết này gần đây. Vui lòng chờ 1 ngày để báo cáo lại!" });
+          }
         }
 
-        // Tạo mới hoặc cập nhật lại báo cáo rejected (allow re-report)
+        // Tạo báo cáo mới
         const insertSql = `
           INSERT INTO bao_cao (recipe_id, user_id, reason, status)
           VALUES (?, ?, ?, 'pending')
-          ON DUPLICATE KEY UPDATE
-            reason = VALUES(reason),
-            status = 'pending',
-            rejected_reason = NULL,
-            updated_at = CURRENT_TIMESTAMP
         `;
 
         db.query(insertSql, [recipeId, userId, reason], (err, result) => {
           if (err) {
             if (err.code === "ER_NO_SUCH_TABLE") {
               return res.status(500).json({ message: "❌ Thiếu bảng bao_cao. Vui lòng chạy script create_bao_cao_table.js" });
-            }
-            if (err.code === "ER_DUP_ENTRY") {
-              return res.status(409).json({ message: "❌ Bạn đã báo cáo bài viết này rồi!" });
             }
             if (err.code === "ER_NO_REFERENCED_ROW_2") {
               return res.status(400).json({ message: "❌ Người dùng hoặc bài viết không tồn tại (vi phạm khóa ngoại)!" });
@@ -61,7 +66,7 @@ router.post("/recipe/:id", verifyToken, (req, res) => {
 
           res.json({
             message: "✅ Báo cáo bài viết thành công!",
-            reportId: result.insertId || existingReports[0]?.id,
+            reportId: result.insertId,
           });
         });
       }
@@ -186,6 +191,18 @@ router.put("/:id/status", verifyAdminOrModerator(db), (req, res) => {
       db.query(updateQuery, updateParams, (err, result) => {
         if (err) {
           return res.status(500).json({ message: "❌ Lỗi cập nhật báo cáo!" });
+        }
+
+        // Nếu xác nhận vi phạm: tăng violation_count và ẩn bài viết nếu đạt 3
+        if (status === "accepted") {
+          db.query(
+            "UPDATE cong_thuc SET violation_count = violation_count + 1, is_hidden = IF(violation_count + 1 >= 3, TRUE, is_hidden) WHERE id = ?",
+            [report.recipe_id],
+            (errViolation) => {
+              if (errViolation) console.error("❌ Lỗi cập nhật violation_count:", errViolation);
+              else console.log("✅ Đã tăng violation_count cho bài viết", report.recipe_id);
+            }
+          );
         }
 
         // Gửi email tương ứng

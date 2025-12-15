@@ -86,11 +86,22 @@ function CreateRecipe() {
   const updateStepImage = (index, files) => {
     if (!files) return;
     const updated = [...stepsList];
-    const newFiles = Array.from(files);
-    updated[index].images = [...(updated[index].images || []), ...newFiles];
+    const existing = updated[index].images || [];
+    const incoming = Array.from(files);
+    // Deduplicate theo key: name|size|lastModified
+    const toKey = f => `${f.name}|${f.size}|${f.lastModified || 0}`;
+    const seen = new Set(existing.map(toKey));
+    const uniqueIncoming = incoming.filter(f => {
+      const k = toKey(f);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    updated[index].images = [...existing, ...uniqueIncoming];
     updated[index].previews = [
       ...(updated[index].previews || []),
-      ...newFiles.map(file => URL.createObjectURL(file))
+      ...uniqueIncoming.map(file => URL.createObjectURL(file))
     ];
     setStepsList(updated);
   };
@@ -134,6 +145,7 @@ function CreateRecipe() {
     }
     const ingredients = trimmedIngredients.join("\n");
 
+    const STEP_DELIMITER = "||STEP||";
     const trimmedSteps = stepsList.map(s => (s.text || "").trim());
     if (trimmedSteps.length === 0 || trimmedSteps.every(s => s === "")) {
       setError("❌ Vui lòng nhập ít nhất 1 bước không trống!");
@@ -143,7 +155,8 @@ function CreateRecipe() {
       setError("❌ Có bước đang để trống. Vui lòng xóa hoặc điền đầy đủ!");
       return;
     }
-    const steps = trimmedSteps.join("\n");
+    // Giữ nguyên xuống dòng bên trong mỗi bước, chỉ chèn delimiter giữa các bước
+    const steps = trimmedSteps.join(`\n${STEP_DELIMITER}\n`);
 
     const formData = new FormData();
     formData.append("title", title);

@@ -66,6 +66,11 @@ function MyRecipes() {
         <div className="recipe-grid-overlay">
           {recipes.map((recipe) => (
             <div key={recipe.id} className="recipe-card-overlay">
+              {recipe.is_hidden && (
+                <div className="hidden-badge" title={`Vi phạm: ${recipe.violation_count || 0}/3`}>
+                  🚫 Đã ẩn ({recipe.violation_count || 0} vi phạm)
+                </div>
+              )}
               <Link to={`/recipe/${recipe.id}`}>
                 <div className="recipe-overlay-img">
                   {recipe.image_url ? (

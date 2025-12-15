@@ -1,0 +1,31 @@
+# Node.js
+src/backend/node_modules/
+src/cookshare/node_modules/
+
+# Env files
+.env
+src/backend/.env
+src/cookshare/.env
+
+# Builds and caches
+build/
+dist/
+.cache/
+.tmp/
+
+# Logs
+*.log
+src/backend/logs/
+
+# Uploads and generated assets
+uploads/
+src/backend/uploads/
+src/backend/backups/
+
+# IDE
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Misc
+coverage/

@@ -9,6 +9,17 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Search, Pagination, Sorting states
+  const [recipeSearch, setRecipeSearch] = useState("");
+  const [recipeCurrentPage, setRecipeCurrentPage] = useState(1);
+  const [recipeSort, setRecipeSort] = useState({ key: "created_at", direction: "desc" });
+  
+  const [userSearch, setUserSearch] = useState("");
+  const [userCurrentPage, setUserCurrentPage] = useState(1);
+  const [userSort, setUserSort] = useState({ key: "created_at", direction: "desc" });
+  
+  const itemsPerPage = 10;
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -94,6 +105,109 @@ function AdminDashboard() {
       }
     }
   };
+
+  const unhideRecipe = async (id) => {
+    if (window.confirm("Xác nhận bỏ ẩn công thức này? Vi phạm sẽ được reset về 0.")) {
+      try {
+        const token = localStorage.getItem("token");
+        await axios.put(`/recipe/unhide/${id}`, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert("✅ Đã bỏ ẩn công thức!");
+        fetchRecipes();
+      } catch (err) {
+        console.error("❌ Lỗi bỏ ẩn công thức:", err);
+        alert(err.response?.data?.message || "Lỗi bỏ ẩn công thức!");
+      }
+    }
+  };
+
+  // Sorting function
+  const handleSort = (key, type) => {
+    if (type === "recipe") {
+      const direction = recipeSort.key === key && recipeSort.direction === "asc" ? "desc" : "asc";
+      setRecipeSort({ key, direction });
+      setRecipeCurrentPage(1);
+    } else {
+      const direction = userSort.key === key && userSort.direction === "asc" ? "desc" : "asc";
+      setUserSort({ key, direction });
+      setUserCurrentPage(1);
+    }
+  };
+
+  // Get sort icon with consistent width
+  const getSortIcon = (key, currentSort) => {
+    if (currentSort.key === key) {
+      return currentSort.direction === "asc" ? " ↑" : " ↓";
+    }
+    return "";
+  };
+
+  // Filter and sort recipes
+  const getFilteredSortedRecipes = () => {
+    let filtered = recipes.filter((recipe) =>
+      recipe.title.toLowerCase().includes(recipeSearch.toLowerCase()) ||
+      recipe.username.toLowerCase().includes(recipeSearch.toLowerCase())
+    );
+
+    filtered.sort((a, b) => {
+      const aVal = a[recipeSort.key];
+      const bVal = b[recipeSort.key];
+      
+      if (typeof aVal === "string") {
+        return recipeSort.direction === "asc" 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      return recipeSort.direction === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+    return filtered;
+  };
+
+  // Filter and sort users
+  const getFilteredSortedUsers = () => {
+    let filtered = users.filter((user) =>
+      user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase())
+    );
+
+    filtered.sort((a, b) => {
+      const aVal = a[userSort.key];
+      const bVal = b[userSort.key];
+      
+      if (typeof aVal === "string") {
+        return userSort.direction === "asc" 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      return userSort.direction === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+    return filtered;
+  };
+
+  // Pagination
+  const paginateRecipes = (filtered) => {
+    const startIndex = (recipeCurrentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  };
+
+  const paginateUsers = (filtered) => {
+    const startIndex = (userCurrentPage - 1) * itemsPerPage;
+    return filtered.slice(startIndex, startIndex + itemsPerPage);
+  };
+
+  // Get paginated data
+  const filteredRecipes = getFilteredSortedRecipes();
+  const paginatedRecipes = paginateRecipes(filteredRecipes);
+  const recipeTotalPages = Math.ceil(filteredRecipes.length / itemsPerPage);
+
+  const filteredUsers = getFilteredSortedUsers();
+  const paginatedUsers = paginateUsers(filteredUsers);
+  const userTotalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const deleteUser = async (id) => {
     if (window.confirm("Xác nhận xóa người dùng này?")) {
@@ -297,27 +411,79 @@ function AdminDashboard() {
       {/* QUẢN LÝ CÔNG THỨC */}
       <section className="admin-section">
         <h2>📖 Quản Lý Công Thức</h2>
+        
+        {/* Search Bar */}
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="🔍 Tìm kiếm theo tiêu đề hoặc tác giả..."
+            value={recipeSearch}
+            onChange={(e) => {
+              setRecipeSearch(e.target.value);
+              setRecipeCurrentPage(1);
+            }}
+          />
+          <span className="search-result-count">
+            Hiển thị {paginatedRecipes.length} / {filteredRecipes.length} công thức
+          </span>
+        </div>
+
         {recipes.length > 0 ? (
+          <>
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Tiêu đề</th>
-                <th>Tác giả</th>
-                <th>Ngày tạo</th>
+                <th onClick={() => handleSort("id", "recipe")} className="sortable">
+                  ID{getSortIcon("id", recipeSort)}
+                </th>
+                <th onClick={() => handleSort("title", "recipe")} className="sortable">
+                  Tiêu đề{getSortIcon("title", recipeSort)}
+                </th>
+                <th onClick={() => handleSort("username", "recipe")} className="sortable">
+                  Tác giả{getSortIcon("username", recipeSort)}
+                </th>
+                <th onClick={() => handleSort("is_hidden", "recipe")} className="sortable">
+                  Trạng thái{getSortIcon("is_hidden", recipeSort)}
+                </th>
+                <th onClick={() => handleSort("created_at", "recipe")} className="sortable">
+                  Ngày tạo{getSortIcon("created_at", recipeSort)}
+                </th>
                 <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
-              {recipes.map((recipe) => {
+              {paginatedRecipes.map((recipe) => {
                 const viewerRole = localStorage.getItem("role");
                 return (
                 <tr key={recipe.id}>
                   <td>#{recipe.id}</td>
-                  <td className="recipe-title">{recipe.title}</td>
+                  <td className="recipe-title">
+                    <a href={`/recipe/${recipe.id}`}>
+                      {recipe.title}
+                    </a>
+                  </td>
                   <td>{recipe.username}</td>
+                  <td>
+                    {recipe.is_hidden ? (
+                      <span className="status-hidden">
+                        🚫 Đã ẩn ({recipe.violation_count} vi phạm)
+                      </span>
+                    ) : (
+                      <span className="status-visible">✅ Hiển thị</span>
+                    )}
+                  </td>
                   <td>{new Date(recipe.created_at).toLocaleDateString("vi-VN")}</td>
                   <td>
+                    {recipe.is_hidden && (
+                      <button
+                        onClick={() => unhideRecipe(recipe.id)}
+                        className="btn-unhide"
+                        title="Bỏ ẩn và reset vi phạm về 0"
+                      >
+                        👁️ Bỏ ẩn
+                      </button>
+                    )}
                     {viewerRole === "admin" && (
                       <button
                         onClick={() => deleteRecipe(recipe.id)}
@@ -330,8 +496,53 @@ function AdminDashboard() {
                 </tr>
               )})}
             </tbody>
-          </table>
-        ) : (
+          </table>          
+          {/* Pagination */}
+          {recipeTotalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                onClick={() => setRecipeCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={recipeCurrentPage === 1}
+              >
+                ← Trước
+              </button>
+              
+              <div className="pagination-pages">
+                {[...Array(recipeTotalPages)].map((_, i) => {
+                  const page = i + 1;
+                  // Hiển thị: trang đầu, trang cuối, trang hiện tại và 2 trang xung quanh
+                  if (
+                    page === 1 ||
+                    page === recipeTotalPages ||
+                    (page >= recipeCurrentPage - 1 && page <= recipeCurrentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        className={`pagination-page ${page === recipeCurrentPage ? "active" : ""}`}
+                        onClick={() => setRecipeCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (page === recipeCurrentPage - 2 || page === recipeCurrentPage + 2) {
+                    return <span key={page} className="pagination-ellipsis">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              
+              <button
+                className="pagination-btn"
+                onClick={() => setRecipeCurrentPage((p) => Math.min(recipeTotalPages, p + 1))}
+                disabled={recipeCurrentPage === recipeTotalPages}
+              >
+                Tiếp →
+              </button>
+            </div>
+          )}
+          </>        ) : (
           <p className="empty-message">Chưa có công thức nào</p>
         )}
       </section>
@@ -339,19 +550,46 @@ function AdminDashboard() {
       {/* QUẢN LÝ NGƯỜI DÙNG */}
       <section className="admin-section">
         <h2>👥 Quản Lý Người Dùng</h2>
+        
+        {/* Search Bar */}
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="🔍 Tìm kiếm theo tên đăng nhập hoặc email..."
+            value={userSearch}
+            onChange={(e) => {
+              setUserSearch(e.target.value);
+              setUserCurrentPage(1);
+            }}
+          />
+          <span className="search-result-count">
+            Hiển thị {paginatedUsers.length} / {filteredUsers.length} người dùng
+          </span>
+        </div>
+
         {users.length > 0 ? (
+          <>
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Tên đăng nhập</th>
-                <th>Email</th>
-                <th>Vai trò</th>
+                <th onClick={() => handleSort("id", "user")} className="sortable">
+                  ID{getSortIcon("id", userSort)}
+                </th>
+                <th onClick={() => handleSort("username", "user")} className="sortable">
+                  Tên đăng nhập{getSortIcon("username", userSort)}
+                </th>
+                <th onClick={() => handleSort("email", "user")} className="sortable">
+                  Email{getSortIcon("email", userSort)}
+                </th>
+                <th onClick={() => handleSort("role", "user")} className="sortable">
+                  Vai trò{getSortIcon("role", userSort)}
+                </th>
                 <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
+              {paginatedUsers.map((user) => {
                 const currentUserId = localStorage.getItem("userId");
                 const viewerRole = localStorage.getItem("role");
                 const isCurrentUser = parseInt(user.id) === parseInt(currentUserId);
@@ -432,6 +670,52 @@ function AdminDashboard() {
               })}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          {userTotalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                onClick={() => setUserCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={userCurrentPage === 1}
+              >
+                ← Trước
+              </button>
+              
+              <div className="pagination-pages">
+                {[...Array(userTotalPages)].map((_, i) => {
+                  const page = i + 1;
+                  if (
+                    page === 1 ||
+                    page === userTotalPages ||
+                    (page >= userCurrentPage - 1 && page <= userCurrentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        className={`pagination-page ${page === userCurrentPage ? "active" : ""}`}
+                        onClick={() => setUserCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (page === userCurrentPage - 2 || page === userCurrentPage + 2) {
+                    return <span key={page} className="pagination-ellipsis">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              
+              <button
+                className="pagination-btn"
+                onClick={() => setUserCurrentPage((p) => Math.min(userTotalPages, p + 1))}
+                disabled={userCurrentPage === userTotalPages}
+              >
+                Tiếp →
+              </button>
+            </div>
+          )}
+          </>
         ) : (
           <p className="empty-message">Chưa có người dùng nào</p>
         )}

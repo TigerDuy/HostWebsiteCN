@@ -38,6 +38,7 @@ function RecipeDetail() {
   });
   const [commentText, setCommentText] = useState("");
   const [replyTexts, setReplyTexts] = useState({});
+  const [showAllIngredients, setShowAllIngredients] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [userRating, setUserRating] = useState(0);
   const [hasRated, setHasRated] = useState(false);
@@ -48,6 +49,22 @@ function RecipeDetail() {
   const [showReportForm, setShowReportForm] = useState(null); // Track which report's reject form is open
   const [rejectReasons, setRejectReasons] = useState({}); // Track reject reason for each report
   const [processingReportId, setProcessingReportId] = useState(null);
+
+  const handleUnhide = async () => {
+    if (!window.confirm("Bỏ ẩn bài viết này? (Reset violation_count về 0)")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API_BASE}/recipe/unhide/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✅ Đã bỏ ẩn bài viết!");
+      fetchRecipeData();
+    } catch (err) {
+      alert(err.response?.data?.message || "❌ Lỗi bỏ ẩn bài viết!");
+    }
+  };
 
   const fetchRecipeData = useCallback(async () => {
     if (!id) {
@@ -532,6 +549,16 @@ function RecipeDetail() {
 
       {/* ✅ YÊU THÍCH */}
       <div className="action-buttons">
+        {recipe.is_hidden && (
+          <div className="hidden-notice">
+            <strong>🚫 Bài viết này đã bị ẩn</strong> do vi phạm quy định ({recipe.violation_count || 0}/3 lần).
+            {localStorage.getItem("role") === "admin" && (
+              <button onClick={handleUnhide} className="btn-unhide">
+                🔓 Bỏ ẩn (Admin)
+              </button>
+            )}
+          </div>
+        )}
         <button
           onClick={handleFavorite}
           className={`favorite-btn ${isFavorited ? "favorited" : ""}`}
@@ -553,11 +580,30 @@ function RecipeDetail() {
           <span className="servings-text">{recipe.servings || '2'} người ăn</span>
         </div>
         <div className="ingredients-display">
-          {recipe.ingredients?.split('\n').filter(i => i.trim()).map((ingredient, index) => (
-            <div key={index} className="ingredient-display-item">
-              {ingredient}
-            </div>
-          ))}
+          {(() => {
+            const allIngredients = recipe.ingredients?.split('\n').filter(i => i.trim()) || [];
+            const LIMIT = 8;
+            const displayIngredients = showAllIngredients ? allIngredients : allIngredients.slice(0, LIMIT);
+            const hasMore = allIngredients.length > LIMIT;
+            
+            return (
+              <>
+                {displayIngredients.map((ingredient, index) => (
+                  <div key={index} className="ingredient-display-item">
+                    {ingredient}
+                  </div>
+                ))}
+                {hasMore && (
+                  <button 
+                    onClick={() => setShowAllIngredients(!showAllIngredients)}
+                    className="btn-toggle-ingredients"
+                  >
+                    {showAllIngredients ? '↑ Thu gọn' : `↓ Xem thêm ${allIngredients.length - LIMIT} nguyên liệu`}
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -571,7 +617,18 @@ function RecipeDetail() {
           </div>
         )}
         <div className="steps-list">
-          {recipe.steps?.split('\n').filter(s => s.trim()).map((step, index) => (
+          {(() => {
+            const STEP_DELIMITER = '||STEP||';
+            const raw = recipe.steps || '';
+            let stepsArr = [];
+            if (raw.includes(STEP_DELIMITER)) {
+              stepsArr = raw.split(STEP_DELIMITER).map(s => s.trim()).filter(Boolean);
+            } else {
+              // Fallback cũ: tách theo dòng trống; nếu không có thì giữ nguyên 1 khối
+              const byBlankLine = raw.split(/\r?\n\s*\r?\n/).map(s => s.trim()).filter(Boolean);
+              stepsArr = byBlankLine.length > 0 ? byBlankLine : (raw.trim() ? [raw.trim()] : []);
+            }
+            return stepsArr.map((step, index) => (
             <div key={index} className="step-display-item">
               <div className="step-display-header">
                 <span className="step-display-number">{index + 1}</span>
@@ -592,7 +649,8 @@ function RecipeDetail() {
                 </div>
               )}
             </div>
-          ))}
+          ));
+          })()}
         </div>
       </div>
 
