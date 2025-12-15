@@ -24,6 +24,8 @@ CREATE TABLE cong_thuc (
   image_url VARCHAR(500),
   servings VARCHAR(100),
   cook_time VARCHAR(100),
+  violation_count INT DEFAULT 0,
+  is_hidden BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES nguoi_dung(id) ON DELETE CASCADE
 );

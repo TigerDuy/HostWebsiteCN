@@ -40,7 +40,16 @@ function EditRecipe() {
         // Parse ingredients/steps by newline
         const ings = (r.ingredients || "").split("\n").filter(s => s.trim());
         setIngredientsList(ings.length ? ings : [""]);
-        const steps = (r.steps || "").split("\n").filter(s => s.trim()).map((t, idx) => {
+        const STEP_DELIMITER = "||STEP||";
+        let parsedSteps = [];
+        if ((r.steps || "").includes(STEP_DELIMITER)) {
+          parsedSteps = (r.steps || "").split(STEP_DELIMITER).map(s => s.trim()).filter(Boolean);
+        } else {
+          const byBlankLine = (r.steps || "").split(/\r?\n\s*\r?\n/).map(s => s.trim()).filter(Boolean);
+          parsedSteps = byBlankLine.length ? byBlankLine : (r.steps ? [r.steps.trim()] : []);
+        }
+
+        const steps = parsedSteps.map((t, idx) => {
           // Tải hình ảnh từng bước từ step_images_by_step
           const stepImages = r.step_images_by_step?.[idx] || [];
           return {
@@ -116,14 +125,25 @@ function EditRecipe() {
   const updateStepImage = (index, files) => {
     if (!files) return;
     const updated = [...stepsList];
-    const newFiles = Array.from(files);
-    updated[index].images = [...(updated[index].images || []), ...newFiles];
+    const existing = updated[index].images || [];
+    const existingIds = updated[index].imageIds || [];
+    const incoming = Array.from(files);
+    const toKey = f => `${f.name}|${f.size}|${f.lastModified || 0}`;
+    const seen = new Set(existing.map(toKey));
+    const uniqueIncoming = incoming.filter(f => {
+      const k = toKey(f);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    updated[index].images = [...existing, ...uniqueIncoming];
     updated[index].previews = [
       ...(updated[index].previews || []),
-      ...newFiles.map(file => URL.createObjectURL(file))
+      ...uniqueIncoming.map(file => URL.createObjectURL(file))
     ];
     // Ảnh mới không có ID (sẽ được tạo khi upload)
-    updated[index].imageIds = [...(updated[index].imageIds || []), ...newFiles.map(() => null)];
+    updated[index].imageIds = [...existingIds, ...uniqueIncoming.map(() => null)];
     setStepsList(updated);
   };
   const removeStepImage = async (stepIndex, imageIndex) => {
@@ -175,6 +195,7 @@ function EditRecipe() {
     }
     const ingredients = trimmedIngredients.join("\n");
 
+    const STEP_DELIMITER = "||STEP||";
     const trimmedSteps = stepsList.map(s => (s.text || "").trim());
     if (trimmedSteps.length === 0 || trimmedSteps.every(s => s === "")) {
       setError("❌ Vui lòng nhập ít nhất 1 bước không trống!");
@@ -184,7 +205,7 @@ function EditRecipe() {
       setError("❌ Có bước đang để trống. Vui lòng xóa hoặc điền đầy đủ!");
       return;
     }
-    const steps = trimmedSteps.join("\n");
+    const steps = trimmedSteps.join(`\n${STEP_DELIMITER}\n`);
 
     const formData = new FormData();
     formData.append("title", title);

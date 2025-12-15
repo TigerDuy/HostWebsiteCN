@@ -1,8 +1,9 @@
 .search-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 30px 20px;
+  max-width: 1138px;
+  margin: -539px auto;
+  padding: 539px 0;
   background: #f9f9f9;
+  background: none !important;
   min-height: calc(100vh - 80px);
 }
 

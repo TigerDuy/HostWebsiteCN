@@ -125,6 +125,7 @@ router.get("/list", (req, res) => {
     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+    WHERE cong_thuc.is_hidden = FALSE
     GROUP BY cong_thuc.id
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
   `, (err, result) => {
@@ -149,7 +150,7 @@ router.get("/search", (req, res) => {
     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
-    WHERE cong_thuc.title LIKE ?
+    WHERE cong_thuc.title LIKE ? AND cong_thuc.is_hidden = FALSE
     GROUP BY cong_thuc.id
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
   `, [`%${q}%`], (err, result) => {
@@ -179,6 +180,24 @@ router.get("/detail/:id", (req, res) => {
   `, [recipeId], (err, result) => {
     if (err || result.length === 0)
       return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
+    
+    const recipe = result[0];
+    // Chặn bài ẩn trừ khi là chủ sở hữu hoặc admin
+    const token = req.headers.authorization?.split(' ')[1];
+    let currentUserId = null;
+    let currentUserRole = null;
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.SECRET_KEY || 'SECRET_KEY');
+        currentUserId = decoded.id;
+        currentUserRole = decoded.role;
+      } catch (e) {}
+    }
+    
+    if (recipe.is_hidden && currentUserId !== recipe.user_id && currentUserRole !== 'admin') {
+      return res.status(403).json({ message: "❌ Bài viết này đã bị ẩn do vi phạm quy định!" });
+    }
     
     // Lấy ảnh từng bước
     db.query(
@@ -584,8 +603,9 @@ router.post("/upload-step-images/:id", verifyToken, uploadMultiple.array("images
     const { stepIndex } = req.body;
     const user_id = req.user.id;
 
-    if (!stepIndex || !req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "❌ Vui lòng chọn ảnh!" });
+    const parsedStepIndex = Number.isFinite(Number(stepIndex)) ? Number(stepIndex) : null;
+    if (parsedStepIndex === null || parsedStepIndex < 0 || !req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "❌ Thiếu hoặc sai stepIndex/ảnh!" });
     }
 
     // Verify ownership
@@ -631,11 +651,24 @@ router.post("/upload-step-images/:id", verifyToken, uploadMultiple.array("images
           }
 
           if (imageUrl) {
+            // Tránh nhân đôi: chỉ chèn nếu chưa tồn tại (recipe_id, step_index, image_url)
             db.query(
-              "INSERT INTO step_images (recipe_id, step_index, image_url) VALUES (?, ?, ?)",
-              [id, stepIndex, imageUrl],
-              (err) => {
-                if (!err) uploadedImages.push(imageUrl);
+              "SELECT id FROM step_images WHERE recipe_id = ? AND step_index = ? AND image_url = ? LIMIT 1",
+              [id, parsedStepIndex, imageUrl],
+              (checkErr, rows) => {
+                if (checkErr) return; // bỏ qua, không chặn request
+                if (rows && rows.length > 0) {
+                  // đã tồn tại -> không chèn, nhưng vẫn trả về trong danh sách để UI đồng bộ
+                  uploadedImages.push(imageUrl);
+                } else {
+                  db.query(
+                    "INSERT INTO step_images (recipe_id, step_index, image_url) VALUES (?, ?, ?)",
+                    [id, parsedStepIndex, imageUrl],
+                    (insErr) => {
+                      if (!insErr) uploadedImages.push(imageUrl);
+                    }
+                  );
+                }
               }
             );
           }
@@ -684,6 +717,30 @@ router.delete("/delete-step-image/:id/:imageId", verifyToken, (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "❌ Lỗi server: " + err.message });
   }
+});
+
+// ✅ API Admin bỏ ẩn bài viết
+router.put("/unhide/:id", verifyToken, (req, res) => {
+  const recipeId = req.params.id;
+  const userRole = req.user.role;
+
+  if (userRole !== 'admin') {
+    return res.status(403).json({ message: "❌ Chỉ admin mới có quyền bỏ ẩn bài viết!" });
+  }
+
+  db.query(
+    "UPDATE cong_thuc SET is_hidden = FALSE, violation_count = 0 WHERE id = ?",
+    [recipeId],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: "❌ Lỗi bỏ ẩn bài viết!" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy bài viết!" });
+      }
+      res.json({ message: "✅ Đã bỏ ẩn bài viết thành công!" });
+    }
+  );
 });
 
 module.exports = router;

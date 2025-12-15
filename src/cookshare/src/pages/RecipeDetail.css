@@ -233,6 +233,39 @@
   flex-wrap: wrap;
 }
 
+.hidden-notice {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+}
+
+.btn-unhide {
+  padding: 8px 16px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-unhide:hover {
+  background: #f57c00;
+  transform: scale(1.05);
+}
+
 /* FAVORITE BUTTON */
 .favorite-btn {
   flex: 1;
@@ -318,6 +351,30 @@
   color: #333;
 }
 
+.btn-toggle-ingredients {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  background: #f8f9fa;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-toggle-ingredients:hover {
+  background: #e9ecef;
+  border-color: #ccc;
+  color: #333;
+}
+
 /* COOK TIME DISPLAY */
 .cook-time-display {
   display: flex;
@@ -385,6 +442,7 @@
   font-size: 15px;
   line-height: 1.6;
   color: #333;
+  white-space: pre-line;
 }
 
 .step-display-image {
