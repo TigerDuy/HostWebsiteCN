@@ -71,7 +71,7 @@ function Register() {
 
         <input
           type="text"
-          placeholder="👤 Tên đăng nhập"
+          placeholder="Tên đăng nhập"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="auth-input"
@@ -79,7 +79,7 @@ function Register() {
 
         <input
           type="email"
-          placeholder="📧 Email"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="auth-input"
@@ -87,7 +87,7 @@ function Register() {
 
         <input
           type="password"
-          placeholder="🔑 Mật khẩu"
+          placeholder="Mật khẩu"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="auth-input"
@@ -95,7 +95,7 @@ function Register() {
 
         <input
           type="password"
-          placeholder="🔑 Xác nhận mật khẩu"
+          placeholder="Xác nhận mật khẩu"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           className="auth-input"
@@ -106,7 +106,7 @@ function Register() {
           disabled={loading}
           className="auth-button"
         >
-          {loading ? "⏳ Đang đăng ký..." : "🚀 Đăng Ký"}
+          {loading ? "⏳ Đang đăng ký..." : "Đăng Ký"}
         </button>
 
         <p className="auth-link">

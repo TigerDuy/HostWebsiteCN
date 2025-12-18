@@ -170,7 +170,7 @@ function Profile() {
       setAvatarUrlInput(res.data.avatar_url || '');
       setUser(prev => ({ ...prev, avatar_url: res.data.avatar_url || prev.avatar_url }));
       setAvatarFile(null);
-      alert('✅ Upload avatar thành công!');
+      alert('Upload avatar thành công!');
     } catch (err) {
       console.error('Upload/Crop error', err);
       alert(err.response?.data?.message || '❌ Lỗi khi xử lý hoặc upload avatar.');
@@ -203,7 +203,7 @@ function Profile() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setMessage("✅ Cập nhật thông tin thành công!");
+      setMessage("Cập nhật thông tin thành công!");
       setUser(res.data);
       setIsEditing(false);
       
@@ -251,7 +251,7 @@ function Profile() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setMessage("✅ Đổi mật khẩu thành công!");
+      setMessage("Đổi mật khẩu thành công!");
       // Clear form sau 2 giây
       setTimeout(() => {
         setFormData(prev => ({
@@ -319,7 +319,7 @@ function Profile() {
                 onClick={() => setIsEditing(true)}
                 className="btn-edit"
               >
-                ✏️ Chỉnh Sửa
+                Chỉnh Sửa
               </button>
             </div>
           ) : (
@@ -449,7 +449,7 @@ function Profile() {
               disabled={isSaving}
               className="btn-save"
             >
-              {isSaving ? "⏳ Đang cập nhật..." : "🔐 Đổi Mật Khẩu"}
+              {isSaving ? "⏳ Đang cập nhật..." : "Đổi Mật Khẩu"}
             </button>
           </form>
         </div>

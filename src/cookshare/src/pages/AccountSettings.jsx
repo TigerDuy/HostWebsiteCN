@@ -52,7 +52,7 @@ function AccountSettings() {
     try {
       setIsSaving(true);
       const res = await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/profile/${userId}`, { username: formData.username, email: formData.email, avatar_url: avatarUrlInput, bio: bioInput }, { headers:{ Authorization:`Bearer ${token}` } });
-      setMessage('✅ Cập nhật thành công!');
+      setMessage('Cập nhật thành công!');
       setUser(res.data);
       localStorage.setItem('username', res.data.username);
       localStorage.setItem('role', res.data.role);
@@ -74,7 +74,7 @@ function AccountSettings() {
     try {
       setIsSaving(true);
       await axios.post(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/auth/change-password/${userId}`, { currentPassword, newPassword }, { headers:{ Authorization:`Bearer ${token}` } });
-      setMessage('✅ Đổi mật khẩu thành công!');
+      setMessage('Đổi mật khẩu thành công!');
       setTimeout(() => { setFormData(prev => ({ ...prev, currentPassword:'', newPassword:'', confirmPassword:'' })); setMessage(''); }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Lỗi đổi mật khẩu!');
@@ -91,7 +91,7 @@ function AccountSettings() {
       setAvatarUrlInput(res.data.avatar_url || '');
       setUser(prev => ({ ...prev, avatar_url: res.data.avatar_url || prev.avatar_url }));
       setAvatarFile(null);
-      alert('✅ Upload avatar thành công!');
+      alert('Upload avatar thành công!');
     } catch (err) {
       alert(err.response?.data?.message || 'Lỗi upload avatar');
     } finally { setUploading(false); }
@@ -115,8 +115,8 @@ function AccountSettings() {
             <div className="user-info">
               <div className="info-row"><label>Tên đăng nhập:</label><span>{user.username}</span></div>
               <div className="info-row"><label>Email:</label><span>{user.email}</span></div>
-              <div className="info-row"><label>Vai trò:</label><span>{user.role === 'admin' ? '👨‍💼 Quản trị viên' : '👤 Người dùng'}</span></div>
-              <button onClick={() => setIsEditing(true)} className="btn-edit">✏️ Chỉnh Sửa</button>
+              <div className="info-row"><label>Vai trò:</label><span>{user.role === 'admin' ? '👨‍💼 Moderator' : '👤 Người dùng'}</span></div>
+              <button onClick={() => setIsEditing(true)} className="btn-edit">Chỉnh Sửa</button>
             </div>
           ) : (
             <form onSubmit={handleUpdateProfile} className="edit-form">
@@ -146,7 +146,7 @@ function AccountSettings() {
             <div className="form-group"><label>Mật khẩu hiện tại:</label><input type="password" name="currentPassword" value={formData.currentPassword} onChange={handleInputChange} className="form-input" /></div>
             <div className="form-group"><label>Mật khẩu mới:</label><input type="password" name="newPassword" value={formData.newPassword} onChange={handleInputChange} className="form-input" /></div>
             <div className="form-group"><label>Xác nhận mật khẩu mới:</label><input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} className="form-input" /></div>
-            <button type="submit" disabled={isSaving} className="btn-save">{isSaving ? '⏳ Đang cập nhật...' : '🔐 Đổi Mật Khẩu'}</button>
+            <button type="submit" disabled={isSaving} className="btn-save">{isSaving ? '⏳ Đang cập nhật...' : 'Đổi Mật Khẩu'}</button>
           </form>
         </div>
       </div>

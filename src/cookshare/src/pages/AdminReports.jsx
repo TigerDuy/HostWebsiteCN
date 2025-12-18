@@ -86,7 +86,7 @@ function AdminReports() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("✅ Xác nhận báo cáo thành công!");
+      alert("Xác nhận báo cáo thành công!");
       fetchAllReports();
     } catch (err) {
       console.error("❌ Lỗi xác nhận:", err);
@@ -113,7 +113,7 @@ function AdminReports() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("✅ Bác bỏ báo cáo thành công!");
+      alert("Bác bỏ báo cáo thành công!");
       setShowRejectForm(null);
       setRejectReason("");
       fetchAllReports();
@@ -150,7 +150,7 @@ function AdminReports() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("✅ Đã gửi cảnh báo đến tác giả");
+      alert("Đã gửi cảnh báo đến tác giả");
       setWarningStatus((prev) => ({
         ...prev,
         [report.id]: { state: "waiting", sent_at: new Date().toISOString() },
@@ -166,7 +166,7 @@ function AdminReports() {
     if (!status || !status.reply) return;
     const { reply } = status;
     const sentAt = new Date(reply.created_at).toLocaleString("vi-VN");
-    alert(`📨 Phản hồi từ ${reply.sender_name || "tác giả"} (${reply.sender_role || "user"})\n---\n${reply.message}\n---\nGửi lúc: ${sentAt}`);
+    alert(`Phản hồi từ ${reply.sender_name || "tác giả"} (${reply.sender_role || "user"})\n---\n${reply.message}\n---\nGửi lúc: ${sentAt}`);
   };
 
   if (loading) {
@@ -233,7 +233,7 @@ function AdminReports() {
                 <div className="report-body">
                   <div className="report-info">
                     <p>
-                      <b>👤 Tác giả:</b>{" "}
+                      <b>Tác giả:</b>{" "}
                       <span
                         onClick={() => navigate(`/user/${report.author_id}`)}
                         style={{ cursor: "pointer", color: "var(--primary-color, #ff7f50)" }}
@@ -243,7 +243,7 @@ function AdminReports() {
                       {" "}({report.author_email})
                     </p>
                     <p>
-                      <b>🚩 Báo cáo từ:</b>{" "}
+                      <b>Báo cáo từ:</b>{" "}
                       <span
                         onClick={() => navigate(`/user/${report.reporter_id}`)}
                         style={{ cursor: "pointer", color: "var(--primary-color, #ff7f50)" }}
@@ -252,15 +252,15 @@ function AdminReports() {
                       </span>
                       {" "}({report.reporter_email})
                     </p>
-                    <p><b>📌 Lý do báo cáo:</b> {report.reason}</p>
-                    <p><b>📅 Ngày báo cáo:</b> {new Date(report.created_at).toLocaleDateString("vi-VN")}</p>
+                    <p><b>Lý do báo cáo:</b> {report.reason}</p>
+                    <p><b>Ngày báo cáo:</b> {new Date(report.created_at).toLocaleDateString("vi-VN")}</p>
                     {report.rejected_reason && (
-                      <p><b>💬 Lý do bác bỏ:</b> {report.rejected_reason}</p>
+                      <p><b>Lý do bác bỏ:</b> {report.rejected_reason}</p>
                     )}
                     {report.processor_name && report.processed_at && (
                       <>
                         <p>
-                          <b>👨‍⚖️ Xử lý bởi:</b>{" "}
+                          <b>Xử lý bởi:</b>{" "}
                           <span
                             onClick={() => navigate(`/user/${report.processor_id}`)}
                             style={{ cursor: "pointer", color: "var(--primary-color, #ff7f50)" }}
@@ -268,7 +268,7 @@ function AdminReports() {
                             {report.processor_name}
                           </span>
                         </p>
-                        <p><b>⏰ Ngày xử lý:</b> {new Date(report.processed_at).toLocaleDateString("vi-VN")}</p>
+                        <p><b>Ngày xử lý:</b> {new Date(report.processed_at).toLocaleDateString("vi-VN")}</p>
                       </>
                     )}
                   </div>
@@ -281,7 +281,7 @@ function AdminReports() {
                         className="btn-notify-author btn-view-reply"
                         onClick={() => handleViewReply(report.id)}
                       >
-                        📨 Xem Phản Hồi
+                        Xem Phản Hồi
                       </button>
                     ) : (
                       <button
@@ -346,7 +346,7 @@ function AdminReports() {
         ) : (
           <p className="empty-message">
             {filter === "pending"
-              ? "✅ Không có báo cáo chưa xử lý"
+              ? "Không có báo cáo chưa xử lý"
               : filter === "accepted"
               ? "📭 Chưa có báo cáo được xác nhận"
               : "📭 Chưa có báo cáo bị bác bỏ"}

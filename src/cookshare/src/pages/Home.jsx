@@ -11,19 +11,20 @@ function Home() {
 
   useEffect(() => {
     setLoading(true);
+
+    const fetchRecipes = async () => {
+      try {
+        const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/list`);
+        setRecipes(res.data);
+      } catch (err) {
+        console.error("❌ Lỗi lấy công thức:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchRecipes();
   }, []);
-
-  const fetchRecipes = async () => {
-    try {
-      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/list`);
-      setRecipes(res.data);
-    } catch (err) {
-      console.error("❌ Lỗi lấy công thức:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -55,7 +56,7 @@ function Home() {
             className="search-input"
           />
           <button type="submit" className="search-button">
-            🔍 Tìm Kiếm
+            Tìm Kiếm
           </button>
         </form>
       </div>
@@ -64,7 +65,7 @@ function Home() {
       {recipes.length > 0 ? (
         <>
           <section className="home-section">
-            <h3 className="section-title">📌 Công Thức Nổi Bật</h3>
+            <h3 className="section-title">Công Thức Nổi Bật</h3>
             <div className="recipe-grid-overlay">
               {recipes.slice(0, 4).map((recipe) => (
                   <Link
@@ -101,7 +102,7 @@ function Home() {
 
           {/* ALL RECIPES SECTION */}
           <section className="home-section">
-            <h3 className="section-title">🍽️ Tất Cả Công Thức</h3>
+            <h3 className="section-title">Tất Cả Công Thức</h3>
             <div className="recipe-grid-overlay">
               {recipes.map((recipe) => (
                   <Link
@@ -132,13 +133,12 @@ function Home() {
                       </div>
                     </div>
                   </Link>
-
-              ))}}
+              ))}
             </div>
           </section>
         </>
       ) : (
-        <p className="empty-message">📭 Chưa có công thức nào được đăng!</p>
+        <p className="empty-message">Chưa có công thức nào được đăng!</p>
       )}
     </div>
   );

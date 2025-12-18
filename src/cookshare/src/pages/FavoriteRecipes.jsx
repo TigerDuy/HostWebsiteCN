@@ -47,7 +47,7 @@ function FavoriteRecipes() {
       await axios.delete(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/favorite/${recipeId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("✅ Đã hủy yêu thích!");
+      alert("Đã hủy yêu thích!");
       fetchFavoriteRecipes();
     } catch (err) {
       alert("❌ Lỗi khi hủy yêu thích!");
@@ -111,9 +111,9 @@ function FavoriteRecipes() {
         </div>
       ) : (
         <div className="empty-state">
-          <p className="empty-message">📭 Bạn chưa lưu công thức nào!</p>
+          <p className="empty-message">Bạn chưa lưu công thức nào!</p>
           <Link to="/" className="btn-explore">
-            🔍 Khám Phá Công Thức
+            Khám Phá Công Thức
           </Link>
         </div>
       )}
