@@ -549,7 +549,7 @@ function RecipeDetail() {
 
       {/* ✅ YÊU THÍCH */}
       <div className="action-buttons">
-        {recipe.is_hidden && (
+        {!!recipe.is_hidden && (
           <div className="hidden-notice">
             <strong>🚫 Bài viết này đã bị ẩn</strong> do vi phạm quy định ({recipe.violation_count || 0}/3 lần).
             {localStorage.getItem("role") === "admin" && (

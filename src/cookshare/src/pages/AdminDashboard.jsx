@@ -500,6 +500,7 @@ function AdminDashboard() {
 
         {recipes.length > 0 ? (
           <>
+          <div className="table-wrapper">
           <table className="admin-table">
             <thead>
               <tr>
@@ -573,7 +574,8 @@ function AdminDashboard() {
                 </tr>
               )})}
             </tbody>
-          </table>          
+          </table>
+          </div>
           {/* Pagination */}
           {recipeTotalPages > 1 && (
             <div className="pagination">
@@ -647,6 +649,7 @@ function AdminDashboard() {
 
         {users.length > 0 ? (
           <>
+          <div className="table-wrapper">
           <table className="admin-table">
             <thead>
               <tr>
@@ -745,6 +748,7 @@ function AdminDashboard() {
               })}
             </tbody>
           </table>
+          </div>
           
           {/* Pagination */}
           {userTotalPages > 1 && (
