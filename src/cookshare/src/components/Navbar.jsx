@@ -9,9 +9,9 @@ function Navbar() {
   const [role, setRole] = useState("");
   const [avatar, setAvatar] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Hàm cập nhật trạng thái từ localStorage
   const updateAuthStatus = () => {
     const token = localStorage.getItem("token");
     const savedUsername = localStorage.getItem("username");
@@ -32,10 +32,8 @@ function Navbar() {
   };
 
   useEffect(() => {
-    // Lần đầu load
     updateAuthStatus();
 
-    // If user is logged in but avatar missing in localStorage, try to fetch profile as fallback
     const tryFetchProfileAvatar = async () => {
       const token = localStorage.getItem('token');
       const uid = localStorage.getItem('userId');
@@ -48,30 +46,17 @@ function Navbar() {
             localStorage.setItem('avatar_url', ava);
             setAvatar(ava);
           }
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) {}
       }
     };
     tryFetchProfileAvatar();
 
-    // Lắng nghe sự thay đổi localStorage từ tab khác
-    const handleStorageChange = () => {
-      updateAuthStatus();
-    };
+    const handleStorageChange = () => updateAuthStatus();
+    const handleAuthUpdated = () => updateAuthStatus();
+    const handleAvatarUpdated = () => updateAuthStatus();
 
     window.addEventListener("storage", handleStorageChange);
-    
-    // Lắng nghe event từ login/logout trong cùng tab (storage event không hoạt động trong cùng tab)
-    const handleAuthUpdated = () => {
-      updateAuthStatus();
-    };
     window.addEventListener('auth-updated', handleAuthUpdated);
-    
-    // Lắng nghe sự kiện tùy chỉnh được dispatch sau khi upload avatar trong cùng tab
-    const handleAvatarUpdated = () => {
-      updateAuthStatus();
-    };
     window.addEventListener('avatar-updated', handleAvatarUpdated);
 
     return () => {
@@ -91,12 +76,11 @@ function Navbar() {
     setUsername("");
     setRole("");
     setAvatar("");
-    
-    // ✅ Trigger event để component khác update
     window.dispatchEvent(new CustomEvent("auth-updated"));
-    
     navigate("/login", { replace: true });
   };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <nav className="navbar">
@@ -104,21 +88,34 @@ function Navbar() {
         <img src="/logo.jpg" alt="CookShare Logo" className="navbar-logo" />
         <h2>CookShare</h2>
       </div>
-      <ul>
-        {/* ✅ Nút "Trang chủ" chỉ hiện khi đã đăng nhập */}
+
+      {/* Hamburger button */}
+      <button 
+        className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        aria-label="Menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      {/* Overlay */}
+      {mobileMenuOpen && <div className="nav-overlay" onClick={closeMobileMenu}></div>}
+
+      <ul className={mobileMenuOpen ? 'nav-open' : ''}>
         {isLoggedIn && (
-          <li><Link to="/">🏠 Trang chủ</Link></li>
+          <li><Link to="/" onClick={closeMobileMenu}>🏠 Trang chủ</Link></li>
         )}
         
         {isLoggedIn ? (
           <>
-            <li><Link to="/my-recipes">📖 Công thức của tôi</Link></li>
-            <li><Link to="/favorites">❤️ Công thức đã lưu</Link></li>
-            <li><Link to="/create">➕ Tạo công thức</Link></li>
+            <li><Link to="/my-recipes" onClick={closeMobileMenu}>📖 Công thức của tôi</Link></li>
+            <li><Link to="/favorites" onClick={closeMobileMenu}>❤️ Đã lưu</Link></li>
+            <li><Link to="/create" onClick={closeMobileMenu}>➕ Tạo mới</Link></li>
             {(role === "admin" || role === "moderator") && (
-              <li><Link to="/admin">⚙️ Trang quản trị</Link></li>
+              <li><Link to="/admin" onClick={closeMobileMenu}>⚙️ Quản trị</Link></li>
             )}
-            {/* ✅ Dropdown menu */}
             <li className="dropdown">
               <button 
                 onClick={() => setShowDropdown(!showDropdown)}
@@ -129,14 +126,14 @@ function Navbar() {
                 ) : (
                   <span className="navbar-avatar-placeholder">{(username || 'U').charAt(0).toUpperCase()}</span>
                 )}
-                <span>{username}</span>
+                <span className="username-text">{username}</span>
               </button>
               {showDropdown && (
                 <div className="dropdown-menu">
                   <Link 
                     to={`/user/${localStorage.getItem('userId') || ''}`} 
                     className="dropdown-item-header"
-                    onClick={() => setShowDropdown(false)}
+                    onClick={() => { setShowDropdown(false); closeMobileMenu(); }}
                   >
                     <div className="dropdown-header-content">
                       {avatar && avatar !== '' && avatar !== 'null' ? (
@@ -149,47 +146,25 @@ function Navbar() {
                       )}
                       <div>
                         <p className="dropdown-username">{username}</p>
-                        <p className="dropdown-hint">Trang cá nhân của tôi</p>
+                        <p className="dropdown-hint">Trang cá nhân</p>
                       </div>
                     </div>
                   </Link>
-                  <Link 
-                    to="/notifications" 
-                    className="dropdown-item"
-                    onClick={() => setShowDropdown(false)}
-                  >
+                  <Link to="/notifications" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
                     🔔 Thông báo
                   </Link>
                   {(role === "admin" || role === "moderator") && (
-                    <Link 
-                      to="/admin/reports" 
-                      className="dropdown-item"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      ⚠️ Quản Lý Báo Cáo
+                    <Link to="/admin/reports" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
+                      ⚠️ Báo cáo
                     </Link>
                   )}
-                  <Link 
-                    to="/customize" 
-                    className="dropdown-item"
-                    onClick={() => setShowDropdown(false)}
-                  >
-                    🎨 Tùy chỉnh giao diện
+                  <Link to="/customize" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
+                    🎨 Giao diện
                   </Link>
-                  <Link 
-                    to="/theme-marketplace" 
-                    className="dropdown-item"
-                    onClick={() => setShowDropdown(false)}
-                  >
-                    🌐 Thị trường theme
+                  <Link to="/theme-marketplace" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
+                    🌐 Theme
                   </Link>
-                  <button 
-                    onClick={() => {
-                      handleLogout();
-                      setShowDropdown(false);
-                    }} 
-                    className="dropdown-logout"
-                  >
+                  <button onClick={() => { handleLogout(); setShowDropdown(false); closeMobileMenu(); }} className="dropdown-logout">
                     🚪 Đăng xuất
                   </button>
                 </div>
@@ -198,8 +173,8 @@ function Navbar() {
           </>
         ) : (
           <>
-            <li><Link to="/login">🔐 Đăng nhập</Link></li>
-            <li><Link to="/register">✍️ Đăng ký</Link></li>
+            <li><Link to="/login" onClick={closeMobileMenu}>🔐 Đăng nhập</Link></li>
+            <li><Link to="/register" onClick={closeMobileMenu}>✍️ Đăng ký</Link></li>
           </>
         )}
       </ul>

@@ -8,6 +8,7 @@ import UserProfile from "./pages/UserProfile";
 import ThemeCustomization from "./pages/ThemeCustomization";
 import ThemeMarketplace from "./pages/ThemeMarketplace";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 // Sử dụng trang tạo công thức mới (CreateRecipe.jsx)
 import CreateRecipe from "./pages/CreateRecipe";
 import RecipeDetail from "./pages/RecipeDetail";
@@ -28,31 +29,37 @@ function App() {
   
   return (
     <BrowserRouter>
-      <Navbar />
+      <div className="app-container">
+        <Navbar />
 
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        {/* Public user profile */}
-        <Route path="/user/:id" element={<UserProfile />} />
-        
-        {/* ✅ Các route bảo vệ - cần đăng nhập */}
-        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/create" element={<ProtectedRoute><CreateRecipe /></ProtectedRoute>} />
-        <Route path="/recipe/:id" element={<ProtectedRoute><RecipeDetail /></ProtectedRoute>} />
-        <Route path="/recipe/:id/edit" element={<ProtectedRoute><EditRecipe /></ProtectedRoute>} />
-        <Route path="/my-recipes" element={<ProtectedRoute><MyRecipes /></ProtectedRoute>} />
-        <Route path="/favorites" element={<ProtectedRoute><FavoriteRecipes /></ProtectedRoute>} />
-        <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
-        <Route path="/customize" element={<ProtectedRoute><ThemeCustomization /></ProtectedRoute>} />
-        <Route path="/theme-marketplace" element={<ProtectedRoute><ThemeMarketplace /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-      </Routes>
+        <main className="main-content">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            {/* Public user profile */}
+            <Route path="/user/:id" element={<UserProfile />} />
+            
+            {/* ✅ Các route bảo vệ - cần đăng nhập */}
+            <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/create" element={<ProtectedRoute><CreateRecipe /></ProtectedRoute>} />
+            <Route path="/recipe/:id" element={<ProtectedRoute><RecipeDetail /></ProtectedRoute>} />
+            <Route path="/recipe/:id/edit" element={<ProtectedRoute><EditRecipe /></ProtectedRoute>} />
+            <Route path="/my-recipes" element={<ProtectedRoute><MyRecipes /></ProtectedRoute>} />
+            <Route path="/favorites" element={<ProtectedRoute><FavoriteRecipes /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+            <Route path="/customize" element={<ProtectedRoute><ThemeCustomization /></ProtectedRoute>} />
+            <Route path="/theme-marketplace" element={<ProtectedRoute><ThemeMarketplace /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          </Routes>
+        </main>
+
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 }
