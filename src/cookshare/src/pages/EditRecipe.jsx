@@ -244,7 +244,7 @@ function EditRecipe() {
         }
       }
 
-      alert("✅ Cập nhật công thức thành công!");
+      alert("Cập nhật công thức thành công!");
       navigate(`/recipe/${id}`);
     } catch (err) {
       setError(err.response?.data?.message || "❌ Lỗi khi cập nhật công thức!");
@@ -274,7 +274,7 @@ function EditRecipe() {
   return (
     <div className="create-recipe-container">
       <div className="create-recipe-content">
-        <h1 className="page-title">✏️ Sửa công thức</h1>
+        <h1 className="page-title">Sửa công thức</h1>
         <form className="create-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
 

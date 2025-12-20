@@ -719,26 +719,341 @@ router.delete("/delete-step-image/:id/:imageId", verifyToken, (req, res) => {
   }
 });
 
+// ✅ API Admin ẩn bài viết thủ công
+router.put("/hide/:id", verifyToken, (req, res) => {
+  const recipeId = req.params.id;
+  const { reason } = req.body;
+  const adminId = req.user.id;
+  const userRole = req.user.role;
+
+  // Kiểm tra quyền
+  if (!['admin', 'moderator'].includes(userRole)) {
+    return res.status(403).json({ message: "❌ Chỉ admin/moderator mới có quyền ẩn bài viết!" });
+  }
+
+  // Validate lý do
+  if (!reason || reason.trim() === "") {
+    return res.status(400).json({ message: "❌ Vui lòng nhập lý do ẩn bài viết!" });
+  }
+
+  // Lấy thông tin bài viết và tác giả
+  db.query(
+    `SELECT cr.id, cr.title, cr.user_id, u.username, u.email
+     FROM cong_thuc cr
+     JOIN nguoi_dung u ON cr.user_id = u.id
+     WHERE cr.id = ?`,
+    [recipeId],
+    (err, recipes) => {
+      if (err) {
+        return res.status(500).json({ message: "❌ Lỗi truy vấn bài viết!" });
+      }
+      if (recipes.length === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy bài viết!" });
+      }
+
+      const recipe = recipes[0];
+
+      // Kiểm tra xem bài viết đã bị ẩn thủ công chưa
+      db.query(
+        "SELECT id FROM admin_hidden_recipes WHERE recipe_id = ? AND is_active = TRUE",
+        [recipeId],
+        (err, existingHidden) => {
+          if (err) {
+            return res.status(500).json({ message: "❌ Lỗi kiểm tra trạng thái ẩn!" });
+          }
+          if (existingHidden.length > 0) {
+            return res.status(409).json({ message: "❌ Bài viết đã bị ẩn thủ công trước đó!" });
+          }
+
+          // Bắt đầu transaction
+          db.beginTransaction((err) => {
+            if (err) {
+              return res.status(500).json({ message: "❌ Lỗi bắt đầu transaction!" });
+            }
+
+            // 1. Ẩn bài viết
+            db.query(
+              "UPDATE cong_thuc SET is_hidden = TRUE WHERE id = ?",
+              [recipeId],
+              (err) => {
+                if (err) {
+                  return db.rollback(() => {
+                    res.status(500).json({ message: "❌ Lỗi ẩn bài viết!" });
+                  });
+                }
+
+                // 2. Lưu lý do ẩn
+                db.query(
+                  "INSERT INTO admin_hidden_recipes (recipe_id, hidden_by, reason, is_active) VALUES (?, ?, ?, TRUE)",
+                  [recipeId, adminId, reason],
+                  (err, result) => {
+                    if (err) {
+                      return db.rollback(() => {
+                        res.status(500).json({ message: "❌ Lỗi lưu lý do ẩn!" });
+                      });
+                    }
+
+                    // 3. Tạo thông báo cho tác giả
+                    const notificationMessage = `Bài viết "${recipe.title}" của bạn đã bị ẩn. Lý do: ${reason}`;
+                    db.query(
+                      `INSERT INTO notifications (user_id, type, recipe_id, message, is_read)
+                       VALUES (?, 'recipe_hidden', ?, ?, FALSE)`,
+                      [recipe.user_id, recipeId, notificationMessage],
+                      (err) => {
+                        if (err) {
+                          console.error("⚠️ Lỗi tạo thông báo:", err);
+                          // Không rollback, vẫn commit transaction
+                        }
+
+                        // 4. Gửi email thông báo cho tác giả
+                        const mailer = require("../config/mailer");
+                        const mailOptions = {
+                          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                          to: recipe.email,
+                          subject: "CookShare - Cảnh báo: Bài viết của bạn đã bị ẩn",
+                          html: `
+                            <p>Xin chào <b>${recipe.username}</b>,</p>
+                            <p>Bài viết "<b>${recipe.title}</b>" của bạn đã bị quản trị viên ẩn vì vi phạm quy định.</p>
+                            <p><b>Lý do:</b> ${reason}</p>
+                            <p>Vui lòng xem xét và chỉnh sửa nội dung để tuân thủ quy định của CookShare.</p>
+                            <p>Nếu bạn có thắc mắc, vui lòng liên hệ với quản trị viên.</p>
+                            <hr />
+                            <p>Trân trọng,<br/>Đội ngũ CookShare</p>
+                          `,
+                        };
+
+                        mailer.sendMail(mailOptions, (mailErr) => {
+                          if (mailErr) {
+                            console.error("⚠️ Lỗi gửi email:", mailErr);
+                          } else {
+                            console.log("✅ Email cảnh báo đã gửi cho tác giả");
+                          }
+                        });
+
+                        // Commit transaction
+                        db.commit((err) => {
+                          if (err) {
+                            return db.rollback(() => {
+                              res.status(500).json({ message: "❌ Lỗi commit transaction!" });
+                            });
+                          }
+
+                          res.json({
+                            message: "✅ Đã ẩn bài viết và gửi thông báo cho tác giả!",
+                            hiddenRecordId: result.insertId,
+                          });
+                        });
+                      }
+                    );
+                  }
+                );
+              }
+            );
+          });
+        }
+      );
+    }
+  );
+});
+
 // ✅ API Admin bỏ ẩn bài viết
 router.put("/unhide/:id", verifyToken, (req, res) => {
   const recipeId = req.params.id;
+  const adminId = req.user.id;
   const userRole = req.user.role;
 
-  if (userRole !== 'admin') {
-    return res.status(403).json({ message: "❌ Chỉ admin mới có quyền bỏ ẩn bài viết!" });
+  // Kiểm tra quyền
+  if (!['admin', 'moderator'].includes(userRole)) {
+    return res.status(403).json({ message: "❌ Chỉ admin/moderator mới có quyền bỏ ẩn bài viết!" });
   }
 
+  // Kiểm tra xem bài viết có đang bị ẩn thủ công không
   db.query(
-    "UPDATE cong_thuc SET is_hidden = FALSE, violation_count = 0 WHERE id = ?",
+    `SELECT ahr.id, cr.title, cr.user_id, u.username, u.email
+     FROM admin_hidden_recipes ahr
+     JOIN cong_thuc cr ON ahr.recipe_id = cr.id
+     JOIN nguoi_dung u ON cr.user_id = u.id
+     WHERE ahr.recipe_id = ? AND ahr.is_active = TRUE`,
     [recipeId],
-    (err, result) => {
+    (err, hiddenRecords) => {
       if (err) {
-        return res.status(500).json({ message: "❌ Lỗi bỏ ẩn bài viết!" });
+        return res.status(500).json({ message: "❌ Lỗi truy vấn!" });
       }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "❌ Không tìm thấy bài viết!" });
+
+      // Nếu không có record ẩn thủ công, chỉ bỏ ẩn và reset violation_count
+      if (hiddenRecords.length === 0) {
+        db.query(
+          "UPDATE cong_thuc SET is_hidden = FALSE, violation_count = 0 WHERE id = ?",
+          [recipeId],
+          (err, result) => {
+            if (err) {
+              return res.status(500).json({ message: "❌ Lỗi bỏ ẩn bài viết!" });
+            }
+            if (result.affectedRows === 0) {
+              return res.status(404).json({ message: "❌ Không tìm thấy bài viết!" });
+            }
+            res.json({ message: "✅ Đã bỏ ẩn bài viết thành công!" });
+          }
+        );
+        return;
       }
-      res.json({ message: "✅ Đã bỏ ẩn bài viết thành công!" });
+
+      const hiddenRecord = hiddenRecords[0];
+
+      // Transaction: bỏ ẩn bài viết + cập nhật record + tạo thông báo
+      db.beginTransaction((err) => {
+        if (err) {
+          return res.status(500).json({ message: "❌ Lỗi bắt đầu transaction!" });
+        }
+
+        // 1. Bỏ ẩn bài viết
+        db.query(
+          "UPDATE cong_thuc SET is_hidden = FALSE, violation_count = 0 WHERE id = ?",
+          [recipeId],
+          (err) => {
+            if (err) {
+              return db.rollback(() => {
+                res.status(500).json({ message: "❌ Lỗi bỏ ẩn bài viết!" });
+              });
+            }
+
+            // 2. Cập nhật record ẩn thủ công
+            db.query(
+              "UPDATE admin_hidden_recipes SET is_active = FALSE, unhidden_by = ?, unhidden_at = CURRENT_TIMESTAMP WHERE id = ?",
+              [adminId, hiddenRecord.id],
+              (err) => {
+                if (err) {
+                  return db.rollback(() => {
+                    res.status(500).json({ message: "❌ Lỗi cập nhật record!" });
+                  });
+                }
+
+                // 3. Tạo thông báo cho tác giả
+                const notificationMessage = `Bài viết "${hiddenRecord.title}" của bạn đã được bỏ ẩn và có thể hiển thị công khai.`;
+                db.query(
+                  `INSERT INTO notifications (user_id, type, recipe_id, message, is_read)
+                   VALUES (?, 'recipe_unhidden', ?, ?, FALSE)`,
+                  [hiddenRecord.user_id, recipeId, notificationMessage],
+                  (err) => {
+                    if (err) {
+                      console.error("⚠️ Lỗi tạo thông báo:", err);
+                    }
+
+                    // 4. Gửi email thông báo
+                    const mailer = require("../config/mailer");
+                    const mailOptions = {
+                      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                      to: hiddenRecord.email,
+                      subject: "CookShare - Bài viết của bạn đã được bỏ ẩn",
+                      html: `
+                        <p>Xin chào <b>${hiddenRecord.username}</b>,</p>
+                        <p>Bài viết "<b>${hiddenRecord.title}</b>" của bạn đã được quản trị viên bỏ ẩn và hiện có thể hiển thị công khai.</p>
+                        <p>Cảm ơn bạn đã chỉnh sửa và tuân thủ quy định của CookShare.</p>
+                        <hr />
+                        <p>Trân trọng,<br/>Đội ngũ CookShare</p>
+                      `,
+                    };
+
+                    mailer.sendMail(mailOptions, (mailErr) => {
+                      if (mailErr) {
+                        console.error("⚠️ Lỗi gửi email:", mailErr);
+                      } else {
+                        console.log("✅ Email thông báo bỏ ẩn đã gửi");
+                      }
+                    });
+
+                    // Commit transaction
+                    db.commit((err) => {
+                      if (err) {
+                        return db.rollback(() => {
+                          res.status(500).json({ message: "❌ Lỗi commit transaction!" });
+                        });
+                      }
+
+                      res.json({ message: "✅ Đã bỏ ẩn bài viết và gửi thông báo cho tác giả!" });
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
+      });
+    }
+  );
+});
+
+// ✅ API Admin xóa bài viết bị ẩn thủ công (tương tự bác bỏ báo cáo)
+router.delete("/admin-hidden/:id", verifyToken, (req, res) => {
+  const hiddenRecordId = req.params.id;
+  const adminId = req.user.id;
+  const userRole = req.user.role;
+
+  // Kiểm tra quyền
+  if (!['admin', 'moderator'].includes(userRole)) {
+    return res.status(403).json({ message: "❌ Chỉ admin/moderator mới có quyền xóa record ẩn!" });
+  }
+
+  // Lấy thông tin record
+  db.query(
+    `SELECT ahr.*, cr.title
+     FROM admin_hidden_recipes ahr
+     JOIN cong_thuc cr ON ahr.recipe_id = cr.id
+     WHERE ahr.id = ? AND ahr.is_active = TRUE`,
+    [hiddenRecordId],
+    (err, records) => {
+      if (err) {
+        return res.status(500).json({ message: "❌ Lỗi truy vấn!" });
+      }
+      if (records.length === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy record ẩn hoặc đã bị xóa!" });
+      }
+
+      const record = records[0];
+
+      // Transaction: bỏ ẩn bài viết + xóa record
+      db.beginTransaction((err) => {
+        if (err) {
+          return res.status(500).json({ message: "❌ Lỗi bắt đầu transaction!" });
+        }
+
+        // 1. Bỏ ẩn bài viết
+        db.query(
+          "UPDATE cong_thuc SET is_hidden = FALSE WHERE id = ?",
+          [record.recipe_id],
+          (err) => {
+            if (err) {
+              return db.rollback(() => {
+                res.status(500).json({ message: "❌ Lỗi bỏ ẩn bài viết!" });
+              });
+            }
+
+            // 2. Xóa/vô hiệu hóa record
+            db.query(
+              "UPDATE admin_hidden_recipes SET is_active = FALSE, unhidden_by = ?, unhidden_at = CURRENT_TIMESTAMP WHERE id = ?",
+              [adminId, hiddenRecordId],
+              (err) => {
+                if (err) {
+                  return db.rollback(() => {
+                    res.status(500).json({ message: "❌ Lỗi xóa record!" });
+                  });
+                }
+
+                // Commit transaction
+                db.commit((err) => {
+                  if (err) {
+                    return db.rollback(() => {
+                      res.status(500).json({ message: "❌ Lỗi commit transaction!" });
+                    });
+                  }
+
+                  res.json({ message: "✅ Đã bác bỏ việc ẩn bài viết!" });
+                });
+              }
+            );
+          }
+        );
+      });
     }
   );
 });

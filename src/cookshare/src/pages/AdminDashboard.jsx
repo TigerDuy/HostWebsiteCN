@@ -6,6 +6,7 @@ function AdminDashboard() {
   const [recipes, setRecipes] = useState([]);
   const [users, setUsers] = useState([]);
   const [notifyModal, setNotifyModal] = useState({ open: false, userId: null, username: "", message: "", sending: false });
+  const [hideModal, setHideModal] = useState({ open: false, recipeId: null, recipeTitle: "", reason: "", hiding: false });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -76,15 +77,15 @@ function AdminDashboard() {
     const currentRole = localStorage.getItem("role");
 
     if (currentRole === "admin") {
-      const roleNames = { admin: "👑 Admin", moderator: "🔐 Quản trị viên", user: "👤 User" };
+      const roleNames = { admin: "👑 Admin", moderator: "🔐 Moderator", user: "👤 User" };
       const nextRole = targetRole === "admin" ? "moderator" : targetRole === "moderator" ? "user" : "admin";
       return `Đổi thành ${roleNames[nextRole]}`;
     }
 
     if (currentRole === "moderator") {
-      if (targetRole === "admin") return "❌ Quản trị viên không thể đổi Admin";
+      if (targetRole === "admin") return "❌ Moderator không thể đổi Admin";
       if (targetRole === "moderator") return "Đổi thành 👤 User";
-      if (targetRole === "user") return "Đổi thành 🔐 Quản trị viên";
+      if (targetRole === "user") return "Đổi thành 🔐 Moderator";
     }
 
     return "Không có quyền đổi role";
@@ -119,6 +120,39 @@ function AdminDashboard() {
         console.error("❌ Lỗi bỏ ẩn công thức:", err);
         alert(err.response?.data?.message || "Lỗi bỏ ẩn công thức!");
       }
+    }
+  };
+
+  const openHideModal = (recipeId, recipeTitle) => {
+    setHideModal({ open: true, recipeId, recipeTitle, reason: "", hiding: false });
+  };
+
+  const closeHideModal = () => {
+    setHideModal({ open: false, recipeId: null, recipeTitle: "", reason: "", hiding: false });
+  };
+
+  const hideRecipe = async () => {
+    if (!hideModal.reason || hideModal.reason.trim() === "") {
+      alert("❌ Vui lòng nhập lý do ẩn bài viết!");
+      return;
+    }
+
+    setHideModal((s) => ({ ...s, hiding: true }));
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`/recipe/hide/${hideModal.recipeId}`, 
+        { reason: hideModal.reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      alert("✅ Đã ẩn bài viết và gửi thông báo cho tác giả!");
+      closeHideModal();
+      fetchRecipes();
+    } catch (err) {
+      console.error("❌ Lỗi ẩn bài viết:", err);
+      alert(err.response?.data?.message || "Lỗi ẩn bài viết!");
+      setHideModal((s) => ({ ...s, hiding: false }));
     }
   };
 
@@ -241,7 +275,7 @@ function AdminDashboard() {
     // Nếu là moderator → không thể tạo Admin
     const currentUserRole = localStorage.getItem("role");
     if (currentUserRole === "moderator" && newRole === "admin") {
-      alert("❌ Quản trị viên không có quyền nâng người dùng lên Admin!");
+      alert("❌ Moderator không có quyền nâng người dùng lên Admin!");
       return;
     }
     
@@ -265,7 +299,7 @@ function AdminDashboard() {
     }
     
     // Upgrade → không cần password
-    const roleNames = { admin: "👑 Admin", moderator: "🔐 Quản trị viên", user: "👤 User" };
+    const roleNames = { admin: "👑 Admin", moderator: "🔐 Moderator", user: "👤 User" };
     if (window.confirm(`Xác nhận đổi vai trò thành ${roleNames[newRole]}?`)) {
       performRoleChange(id, newRole);
     }
@@ -359,13 +393,48 @@ function AdminDashboard() {
         <div className="restricted-banner">
           <span className="restricted-badge">Chế độ hạn chế</span>
           <div className="restricted-text">
-            Bạn đang đăng nhập với vai trò Quản trị viên (moderator). Bạn chỉ có thể xem dữ liệu và nâng/hạ User ↔ Quản trị viên. Không thể tạo Admin, hạ Admin, xóa người dùng/công thức, hoặc reset mật khẩu.
+            Bạn đang đăng nhập với vai trò Moderator (moderator). Bạn chỉ có thể xem dữ liệu và nâng/hạ User ↔ Moderator. Không thể tạo Admin, hạ Admin, xóa người dùng/công thức, hoặc reset mật khẩu.
           </div>
         </div>
       )}
 
       {/* THỐNG KÊ */}
       <div className="admin-stats">
+      {/* Modal ẩn bài viết */}
+      {hideModal.open && (
+        <div className="modal-overlay" onClick={closeHideModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>🚫 Ẩn bài viết: {hideModal.recipeTitle}</h3>
+            <p style={{ marginBottom: "10px", color: "#666" }}>
+              Nhập lý do ẩn bài viết để thông báo cho tác giả:
+            </p>
+            <textarea
+              value={hideModal.reason}
+              onChange={(e) => setHideModal((s) => ({ ...s, reason: e.target.value }))}
+              placeholder="Ví dụ: Bài viết có nội dung không phù hợp với quy định cộng đồng..."
+              maxLength={500}
+              style={{ width: "100%", minHeight: "120px", marginBottom: "15px" }}
+            />
+            <div className="modal-actions">
+              <button
+                className="btn-primary"
+                onClick={hideRecipe}
+                disabled={hideModal.hiding}
+              >
+                {hideModal.hiding ? "⏳ Đang ẩn..." : "✅ Gửi & Ẩn bài viết"}
+              </button>
+              <button
+                className="btn-cancel-inline"
+                onClick={closeHideModal}
+                disabled={hideModal.hiding}
+              >
+                ❌ Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal gửi thông báo */}
       {notifyModal.open && (
         <div className="modal-overlay" onClick={() => setNotifyModal({ open: false, userId: null, username: "", message: "", sending: false })}>
@@ -475,13 +544,21 @@ function AdminDashboard() {
                   </td>
                   <td>{new Date(recipe.created_at).toLocaleDateString("vi-VN")}</td>
                   <td>
-                    {recipe.is_hidden && (
+                    {recipe.is_hidden ? (
                       <button
                         onClick={() => unhideRecipe(recipe.id)}
                         className="btn-unhide"
                         title="Bỏ ẩn và reset vi phạm về 0"
                       >
                         👁️ Bỏ ẩn
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openHideModal(recipe.id, recipe.title)}
+                        className="btn-hide"
+                        title="Ẩn bài viết với lý do"
+                      >
+                        🚫 Ẩn
                       </button>
                     )}
                     {viewerRole === "admin" && (
@@ -608,7 +685,7 @@ function AdminDashboard() {
                           user.role === "admin" ? "admin" : user.role === "moderator" ? "moderator" : "user"
                         }`}
                       >
-                        {user.role === "admin" ? "👑 Admin" : user.role === "moderator" ? "🔐 Quản trị viên" : "👤 User"}
+                        {user.role === "admin" ? "👑 Admin" : user.role === "moderator" ? "🔐 Moderator" : "👤 User"}
                       </span>
                     </td>
                     <td>
@@ -635,7 +712,7 @@ function AdminDashboard() {
                             title={getChangeRoleTooltip(user.role, isCurrentUser)}
                           >
                             <option value="user">👤 User</option>
-                            <option value="moderator">🔐 Quản trị viên</option>
+                            <option value="moderator">🔐 Moderator</option>
                             <option value="admin">👑 Admin</option>
                           </select>
                           <button
@@ -661,9 +738,7 @@ function AdminDashboard() {
                             </button>
                           )}
                         </>
-                      ) : (
-                        <span style={{ color: "#888" }}>Quản trị viên không thể đổi role</span>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 );

@@ -59,7 +59,7 @@ function RecipeDetail() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("✅ Đã bỏ ẩn bài viết!");
+      alert("Đã bỏ ẩn bài viết!");
       fetchRecipeData();
     } catch (err) {
       alert(err.response?.data?.message || "❌ Lỗi bỏ ẩn bài viết!");
@@ -554,7 +554,7 @@ function RecipeDetail() {
             <strong>🚫 Bài viết này đã bị ẩn</strong> do vi phạm quy định ({recipe.violation_count || 0}/3 lần).
             {localStorage.getItem("role") === "admin" && (
               <button onClick={handleUnhide} className="btn-unhide">
-                🔓 Bỏ ẩn (Admin)
+                Bỏ ẩn (Admin)
               </button>
             )}
           </div>
@@ -675,13 +675,13 @@ function RecipeDetail() {
               marginBottom: "15px"
             }}>
               <div style={{ marginBottom: "10px" }}>
-                <p><strong>👤 Người báo cáo:</strong> {report.reporter_name || "Ẩn danh"}</p>
-                <p><strong>📝 Lý do:</strong> {report.reason}</p>
+                <p><strong>Người báo cáo:</strong> {report.reporter_name || "Ẩn danh"}</p>
+                <p><strong>Lý do:</strong> {report.reason}</p>
                 <p><strong>📅 Ngày báo cáo:</strong> {new Date(report.created_at).toLocaleString('vi-VN')}</p>
                 {report.processor_name && report.processed_at && (
                   <>
-                    <p><strong>👨‍⚖️ Xử lý bởi:</strong> {report.processor_name}</p>
-                    <p><strong>⏰ Ngày xử lý:</strong> {new Date(report.processed_at).toLocaleString('vi-VN')}</p>
+                    <p><strong>Xử lý bởi:</strong> {report.processor_name}</p>
+                    <p><strong>Ngày xử lý:</strong> {new Date(report.processed_at).toLocaleString('vi-VN')}</p>
                   </>
                 )}
               </div>
@@ -702,7 +702,7 @@ function RecipeDetail() {
                       marginRight: "10px"
                     }}
                   >
-                    ✅ Xác Nhận
+                    Xác Nhận
                   </button>
 
                   {showReportForm === report.id ? (
@@ -735,7 +735,7 @@ function RecipeDetail() {
                           marginRight: "10px"
                         }}
                       >
-                        🔴 Gửi Bác Bỏ
+                        Gửi Bác Bỏ
                       </button>
                       <button
                         onClick={() => {

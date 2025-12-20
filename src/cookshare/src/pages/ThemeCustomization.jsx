@@ -261,11 +261,11 @@ function ThemeCustomization() {
   return (
     <div className="theme-customization-container">
       <div className="theme-content">
-        <h1 className="theme-title page-title">🎨 Tùy Chỉnh Giao Diện</h1>
+        <h1 className="theme-title page-title">Chỉnh Giao Diện</h1>
 
         {/* Preview Section */}
         <div className="theme-preview-section">
-          <h2>👁️ Xem Trước</h2>
+          <h2>Xem Trước</h2>
           <div className="preview-box" style={{
             backgroundColor: '#fafafa',
             backgroundImage: backgroundPreview ? `url(${backgroundPreview})` : 'none',
@@ -292,7 +292,7 @@ function ThemeCustomization() {
 
         {/* Color Picker */}
         <div className="theme-section">
-          <h2>🎨 Màu Chủ Đạo</h2>
+          <h2>🎨 Màu</h2>
           <div className="color-picker-group">
             <input
               type="color"
@@ -314,13 +314,13 @@ function ThemeCustomization() {
 
         {/* Background Image */}
         <div className="theme-section">
-          <h2>🖼️ Ảnh Nền</h2>
+          <h2>Background</h2>
           <div className="background-upload-group">
             {backgroundPreview && (
               <div className="background-preview">
                 <img src={backgroundPreview} alt="Background preview" />
                 <button onClick={handleRemoveBackground} className="btn-remove-bg">
-                  ❌ Xóa ảnh nền
+                  ❌ 
                 </button>
               </div>
             )}
@@ -349,7 +349,7 @@ function ThemeCustomization() {
             {isSaving ? '⏳ Đang lưu...' : '💾 Lưu'}
           </button>
           <button onClick={handleReset} className="btn-reset">
-            🔄 Mặc Định
+            Mặc Định
           </button>
           <button onClick={handleExportTheme} className="btn-export">
             📤 Xuất
@@ -366,7 +366,7 @@ function ThemeCustomization() {
             📥 Nhập
           </label>
           <button onClick={() => setShowShareDialog(true)} className="btn-share">
-            🌐 Chia Sẻ
+            🌐 Share
           </button>
         </div>
 
@@ -374,7 +374,7 @@ function ThemeCustomization() {
         {showShareDialog && (
           <div className="modal-overlay" onClick={() => setShowShareDialog(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>🌐 Chia Sẻ Theme</h2>
+              <h2>🌐 Share</h2>
               <p>Nhập tên theme để chia sẻ cùng cộng đồng:</p>
               <input
                 type="text"
@@ -390,13 +390,13 @@ function ThemeCustomization() {
                   className="btn-confirm"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  {isSharing ? '⏳ Đang chia sẻ...' : '✅ Chia Sẻ'}
+                  {isSharing ? '⏳ Share...' : 'Share'}
                 </button>
                 <button 
                   onClick={() => setShowShareDialog(false)}
                   className="btn-cancel"
                 >
-                  ❌ Hủy
+                  Hủy
                 </button>
               </div>
             </div>

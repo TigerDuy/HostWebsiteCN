@@ -94,7 +94,7 @@ function ThemeMarketplace() {
     return (
       <div className="marketplace-container">
         <div className="marketplace-content">
-          <h1 className="marketplace-title page-title">🎨 Thị Trường Theme</h1>
+          <h1 className="marketplace-title page-title">Theme Share</h1>
           <div className="loading">⏳ Đang tải...</div>
         </div>
       </div>
@@ -104,7 +104,7 @@ function ThemeMarketplace() {
   return (
     <div className="marketplace-container">
       <div className="marketplace-content">
-        <h1 className="marketplace-title page-title">🎨 Thị Trường Theme</h1>
+        <h1 className="marketplace-title page-title">Theme Share</h1>
         <p className="marketplace-subtitle">Khám phá và tải các theme được tạo bởi cộng đồng</p>
 
         {message && <div className="status-message">{message}</div>}
@@ -161,20 +161,20 @@ function ThemeMarketplace() {
                       className="btn-apply"
                       style={{ backgroundColor: theme.primary_color }}
                     >
-                      ✅ Áp Dụng
+                      Áp Dụng
                     </button>
                     <button 
                       onClick={() => downloadThemeAsJson(theme)}
                       className="btn-download"
                     >
-                      📥 Tải JSON
+                      Tải JSON
                     </button>
                     {canDelete && (
                       <button 
                         onClick={() => deleteSharedTheme(theme)}
                         className="btn-delete"
                       >
-                        🗑️ Hủy Chia Sẻ
+                        Hủy Chia Sẻ
                       </button>
                     )}
                   </div>

@@ -61,7 +61,7 @@ function Login() {
 
         <input
           type="email"
-          placeholder="📧 Email"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="auth-input"
@@ -69,7 +69,7 @@ function Login() {
 
         <input
           type="password"
-          placeholder="🔑 Mật khẩu"
+          placeholder="Mật khẩu"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="auth-input"
@@ -80,7 +80,7 @@ function Login() {
           disabled={loading}
           className="auth-button"
         >
-          {loading ? "⏳ Đang đăng nhập..." : "🚀 Đăng Nhập"}
+          {loading ? "⏳ Đang đăng nhập..." : "Đăng Nhập"}
         </button>
 
         <p className="auth-link" style={{ textAlign: 'center', marginTop: '10px' }}>

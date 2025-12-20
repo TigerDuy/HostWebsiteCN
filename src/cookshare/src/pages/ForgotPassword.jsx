@@ -127,7 +127,7 @@ function ForgotPassword() {
           <form onSubmit={handleSendOTP}>
             <input
               type="email"
-              placeholder="📧 Nhập email của bạn"
+              placeholder="Nhập email của bạn"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="auth-input"
@@ -138,7 +138,7 @@ function ForgotPassword() {
               disabled={loading}
               className="auth-button"
             >
-              {loading ? "⏳ Đang gửi..." : "🚀 Gửi OTP"}
+              {loading ? "⏳ Đang gửi..." : "Gửi OTP"}
             </button>
           </form>
         )}
@@ -147,11 +147,11 @@ function ForgotPassword() {
           // Step 2: OTP Input
           <form onSubmit={handleVerifyOTP}>
             <p style={{ color: '#666', marginBottom: '15px', textAlign: 'center', fontSize: '14px' }}>
-              ✉️ OTP đã được gửi đến <strong>{email}</strong>
+              OTP đã được gửi đến <strong>{email}</strong>
             </p>
             <input
               type="text"
-              placeholder="🔐 Nhập mã OTP (6 chữ số)"
+              placeholder="Nhập mã OTP (6 chữ số)"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               className="auth-input"
@@ -163,7 +163,7 @@ function ForgotPassword() {
               disabled={loading}
               className="auth-button"
             >
-              {loading ? "⏳ Đang xác nhận..." : "✅ Xác Nhận OTP"}
+              {loading ? "⏳ Đang xác nhận..." : "Xác Nhận OTP"}
             </button>
 
             <button
@@ -188,7 +188,7 @@ function ForgotPassword() {
           <form onSubmit={handleResetPassword}>
             <input
               type="password"
-              placeholder="🔑 Mật khẩu mới"
+              placeholder="Mật khẩu mới"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="auth-input"
@@ -196,7 +196,7 @@ function ForgotPassword() {
 
             <input
               type="password"
-              placeholder="🔑 Xác nhận mật khẩu"
+              placeholder="Xác nhận mật khẩu"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="auth-input"
@@ -207,7 +207,7 @@ function ForgotPassword() {
               disabled={loading}
               className="auth-button"
             >
-              {loading ? "⏳ Đang cập nhật..." : "✅ Đặt Lại Mật Khẩu"}
+              {loading ? "⏳ Đang cập nhật..." : "Đặt Lại Mật Khẩu"}
             </button>
 
             <button

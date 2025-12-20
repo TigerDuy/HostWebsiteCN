@@ -201,7 +201,7 @@ function CreateRecipe() {
         }
       }
 
-      alert("✅ Đăng công thức thành công!");
+      alert("Đăng công thức thành công!");
       navigate("/my-recipes");
     } catch (err) {
       setError(err.response?.data?.message || "❌ Lỗi khi đăng công thức!");
@@ -231,7 +231,7 @@ function CreateRecipe() {
   return (
     <div className="create-recipe-container">
       <div className="create-recipe-content">
-        <h1 className="page-title">✏️ Viết món mới</h1>
+        <h1 className="page-title">Viết món mới</h1>
         
         <form className="create-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
