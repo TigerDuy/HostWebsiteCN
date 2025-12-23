@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import ReportButton from "../components/ReportButton";
+import ImageLightbox from "../components/ImageLightbox";
 import "./RecipeDetail.css";
 
 function RecipeDetail() {
@@ -465,7 +466,7 @@ function RecipeDetail() {
             style={{ maxWidth: '600px', borderRadius: '8px' }}
           />
         ) : (
-          <img
+          <ImageLightbox
             src={recipe.image_url}
             className="detail-img"
             alt={recipe.title}
@@ -641,7 +642,7 @@ function RecipeDetail() {
                     return (
                       <div key={imgIndex} className="step-display-image">
                         {src ? (
-                          <img src={src} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
+                          <ImageLightbox src={src} alt={`Bước ${index + 1} - Ảnh ${imgIndex + 1}`} />
                         ) : null}
                       </div>
                     );

@@ -139,6 +139,42 @@ router.post("/login", (req, res) => {
   );
 });
 
+// KIỂM TRA ROLE HIỆN TẠI (để phát hiện thay đổi role)
+router.get("/check-role", verifyToken, (req, res) => {
+  const userId = req.user.id;
+  const tokenRole = req.user.role;
+
+  db.query(
+    "SELECT role FROM nguoi_dung WHERE id = ?",
+    [userId],
+    (err, result) => {
+      if (err || result.length === 0) {
+        return res.status(401).json({ 
+          message: "Tài khoản không tồn tại!", 
+          forceLogout: true 
+        });
+      }
+
+      const currentRole = result[0].role;
+
+      // Nếu role trong DB khác với role trong token -> cần đăng nhập lại
+      if (currentRole !== tokenRole) {
+        return res.status(401).json({
+          message: "Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại!",
+          forceLogout: true,
+          oldRole: tokenRole,
+          newRole: currentRole
+        });
+      }
+
+      return res.json({
+        role: currentRole,
+        valid: true
+      });
+    }
+  );
+});
+
 // QUÊN MẬT KHẨU - STEP 1: Gửi OTP
 router.post("/forgot-password", (req, res) => {
   const { email } = req.body;
