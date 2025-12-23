@@ -2,10 +2,11 @@
 src/backend/node_modules/
 src/cookshare/node_modules/
 
-# Env files
+# Env files and git config
 .env
 src/backend/.env
 src/cookshare/.env
+.gitignore
 
 # Builds and caches
 build/
@@ -29,3 +30,6 @@ Thumbs.db
 
 # Misc
 coverage/
+# Markdown files (except README.md)
+*.md
+!README.md
