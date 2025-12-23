@@ -1,12 +1,15 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import RulesModal from "../components/RulesModal";
 
 function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeRules, setAgreeRules] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,6 +41,11 @@ function Register() {
 
     if (password !== confirmPassword) {
       setError("❌ Mật khẩu không trùng khớp!");
+      return;
+    }
+
+    if (!agreeRules) {
+      setError("❌ Bạn phải đồng ý với quy tắc cộng đồng để đăng ký!");
       return;
     }
 
@@ -101,10 +109,35 @@ function Register() {
           className="auth-input"
         />
 
+        {/* Checkbox đồng ý quy tắc */}
+        <div className="rules-agreement">
+          <label className="rules-checkbox-label">
+            <input
+              type="checkbox"
+              checked={agreeRules}
+              onChange={(e) => setAgreeRules(e.target.checked)}
+              className="rules-checkbox"
+            />
+            <span>
+              Tôi đồng ý với{" "}
+              <span 
+                className="rules-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowRulesModal(true);
+                }}
+              >
+                Quy tắc cộng đồng
+              </span>
+            </span>
+          </label>
+        </div>
+
         <button 
           onClick={handleRegister}
-          disabled={loading}
+          disabled={loading || !agreeRules}
           className="auth-button"
+          style={{ opacity: !agreeRules ? 0.6 : 1 }}
         >
           {loading ? "⏳ Đang đăng ký..." : "Đăng Ký"}
         </button>
@@ -113,6 +146,12 @@ function Register() {
           Đã có tài khoản? <a href="/login">Đăng nhập tại đây</a>
         </p>
       </div>
+
+      {/* Modal hiển thị quy tắc */}
+      <RulesModal 
+        isOpen={showRulesModal} 
+        onClose={() => setShowRulesModal(false)} 
+      />
     </div>
   );
 }

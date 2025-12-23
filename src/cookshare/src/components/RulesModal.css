@@ -1,0 +1,128 @@
+.rules-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.rules-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.rules-modal-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #ff7f50 0%, #ff6347 100%);
+  color: white;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1;
+}
+
+.rules-modal-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.rules-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rules-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.rules-modal-content {
+  padding: 20px 24px;
+}
+
+.rules-modal-section {
+  margin-bottom: 20px;
+}
+
+.rules-modal-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.rules-modal-section h3 {
+  color: #ff7f50;
+  font-size: 1rem;
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #ffe0cc;
+}
+
+.rules-modal-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.rules-modal-section li {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.rules-modal-section li:last-child {
+  margin-bottom: 0;
+}
+
+.rules-modal-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.rules-modal-footer p {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+  font-style: italic;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .rules-modal {
+    max-height: 90vh;
+    margin: 10px;
+  }
+
+  .rules-modal-header {
+    padding: 15px 18px;
+  }
+
+  .rules-modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .rules-modal-content {
+    padding: 15px 18px;
+  }
+}

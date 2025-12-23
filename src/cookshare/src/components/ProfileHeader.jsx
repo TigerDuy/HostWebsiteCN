@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import FollowButton from './FollowButton';
+import ReportButton from './ReportButton';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import AvatarCropper from './AvatarCropper';
@@ -85,7 +86,14 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
           <Link to="/settings" className="btn-edit-profile">⚙️ Chỉnh Sửa</Link>
         )}
         {currentUserId && parseInt(currentUserId,10) !== user.id && (
-          <FollowButton userId={user.id} />
+          <>
+            <FollowButton userId={user.id} />
+            <ReportButton 
+              targetType="user" 
+              targetId={user.id} 
+              buttonStyle="default"
+            />
+          </>
         )}
       </div>
     </div>

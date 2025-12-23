@@ -164,6 +164,9 @@ function Navbar() {
                   <Link to="/theme-marketplace" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
                     🌐 Theme
                   </Link>
+                  <Link to="/rules" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
+                    📜 Quy tắc
+                  </Link>
                   <button onClick={() => { handleLogout(); setShowDropdown(false); closeMobileMenu(); }} className="dropdown-logout">
                     🚪 Đăng xuất
                   </button>
