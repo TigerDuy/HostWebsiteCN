@@ -487,7 +487,7 @@ function AdminDashboard() {
         <div className="search-container">
           <input
             type="text"
-            className="search-input"
+            className="admin-search-input"
             placeholder="🔍 Tìm kiếm theo tiêu đề hoặc tác giả..."
             value={recipeSearch}
             onChange={(e) => {
@@ -639,7 +639,7 @@ function AdminDashboard() {
         <div className="search-container">
           <input
             type="text"
-            className="search-input"
+            className="admin-search-input"
             placeholder="🔍 Tìm kiếm theo tên đăng nhập hoặc email..."
             value={userSearch}
             onChange={(e) => {

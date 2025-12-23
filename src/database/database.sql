@@ -36,11 +36,23 @@ CREATE TABLE cong_thuc (
   image_url VARCHAR(500),
   servings VARCHAR(100),
   cook_time VARCHAR(100),
+  views INT DEFAULT 0,
   violation_count INT DEFAULT 0,
   is_hidden BOOLEAN DEFAULT FALSE,
   hidden_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES nguoi_dung(id) ON DELETE CASCADE
+);
+
+-- ✅ BẢNG THEO DÕI LƯỢT XEM (chống spam view)
+CREATE TABLE recipe_views (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  recipe_id INT NOT NULL,
+  client_ip VARCHAR(45) NOT NULL,
+  user_agent VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (recipe_id) REFERENCES cong_thuc(id) ON DELETE CASCADE,
+  INDEX idx_recipe_views_lookup (recipe_id, client_ip, user_agent, created_at)
 );
 
 -- ✅ BẢNG ẢNH CÁC BƯỚC

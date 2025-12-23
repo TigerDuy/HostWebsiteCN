@@ -23,6 +23,7 @@ import EditRecipe from "./pages/EditRecipe";
 import Notifications from "./pages/Notifications";
 import AdminReports from "./pages/AdminReports";
 import { useThemeLoader } from "./hooks/useThemeLoader";
+import RoleChecker from "./components/RoleChecker";
 
 function App() {
   // Load theme on app startup
@@ -30,6 +31,7 @@ function App() {
   
   return (
     <BrowserRouter>
+      <RoleChecker />
       <div className="app-container">
         <Navbar />
 

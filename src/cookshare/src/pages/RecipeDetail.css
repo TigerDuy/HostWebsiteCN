@@ -13,6 +13,12 @@
   object-fit: cover;
   margin-bottom: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+}
+
+.detail-img:hover {
+  transform: scale(1.01);
 }
 
 .detail-title {
@@ -462,12 +468,19 @@
   flex: 0 1 auto;
 }
 
-.step-display-image img {
+.step-display-image img:not(.lightbox-image) {
   max-width: 300px;
   max-height: 300px;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: zoom-in;
+  transition: all 0.3s ease;
+}
+
+.step-display-image img:not(.lightbox-image):hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
 /* COMMENT SECTION */
