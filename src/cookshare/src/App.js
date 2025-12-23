@@ -7,6 +7,7 @@ import AccountSettings from "./pages/AccountSettings";
 import UserProfile from "./pages/UserProfile";
 import ThemeCustomization from "./pages/ThemeCustomization";
 import ThemeMarketplace from "./pages/ThemeMarketplace";
+import Rules from "./pages/Rules";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 // Sử dụng trang tạo công thức mới (CreateRecipe.jsx)
@@ -55,6 +56,7 @@ function App() {
             <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/rules" element={<Rules />} />
           </Routes>
         </main>
 

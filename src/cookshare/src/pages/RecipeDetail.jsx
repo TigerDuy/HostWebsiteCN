@@ -568,7 +568,7 @@ function RecipeDetail() {
         
         {/* ✅ BÁO CÁO */}
         {localStorage.getItem("userId") !== String(recipe.user_id) && (
-          <ReportButton recipeId={id} />
+          <ReportButton targetType="recipe" targetId={id} />
         )}
       </div>
 
@@ -870,6 +870,14 @@ function CommentItem({ comment, level, replyingTo, setReplyingTo, replyTexts, se
           {comment.user_liked ? '♥' : '♡'} {comment.like_count > 0 && comment.like_count}
         </button>
         <button className="btn-reply" title="Trả lời" onClick={() => setReplyingTo(isReplying ? null : comment.id)}>Trả lời</button>
+        {/* Nút báo cáo bình luận */}
+        {currentUserId !== comment.user_id && (
+          <ReportButton 
+            targetType="comment" 
+            targetId={comment.id} 
+            buttonStyle="text"
+          />
+        )}
       </div>
 
       {isReplying && (

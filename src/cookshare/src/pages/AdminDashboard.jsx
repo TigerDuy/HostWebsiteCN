@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "../utils/axios";
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+import BroadcastNotification from "../components/BroadcastNotification";
+
 function AdminDashboard() {
   const [recipes, setRecipes] = useState([]);
   const [users, setUsers] = useState([]);
@@ -629,6 +631,9 @@ function AdminDashboard() {
       {/* QUẢN LÝ NGƯỜI DÙNG */}
       <section className="admin-section">
         <h2>👥 Quản Lý Người Dùng</h2>
+        
+        {/* Broadcast Notification */}
+        <BroadcastNotification onSuccess={fetchUsers} />
         
         {/* Search Bar */}
         <div className="search-container">

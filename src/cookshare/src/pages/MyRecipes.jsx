@@ -60,7 +60,12 @@ function MyRecipes() {
 
   return (
     <div className="my-recipes-container">
-      <h1 className="my-page-title">📖 Công Thức Của Tôi</h1>
+      <div className="my-recipes-header">
+        <h1 className="my-page-title">📖 Công Thức Của Tôi</h1>
+        <Link to="/create" className="btn-create-new">
+          ➕ Tạo Công Thức Mới
+        </Link>
+      </div>
 
       {recipes.length > 0 ? (
         <div className="recipe-grid-overlay">

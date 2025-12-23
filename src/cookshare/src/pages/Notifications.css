@@ -152,6 +152,96 @@
   margin: 8px 0;
 }
 
+/* Unread & Broadcast styles */
+.notif-card.unread {
+  background: #fff8e1;
+  border-left: 4px solid #ffc107;
+}
+
+.notif-card.broadcast {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+/* Image styles */
+.report-image-preview,
+.notif-image {
+  margin: 10px 0;
+}
+
+.report-image-preview img,
+.notif-image img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.report-image-preview img:hover,
+.notif-image img:hover {
+  transform: scale(1.02);
+}
+
+/* Reply image section */
+.reply-image-section {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reply-image-label {
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+}
+
+.reply-image-label:hover {
+  border-color: #ff7f50;
+  background: #fff5f0;
+}
+
+.reply-image-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.reply-image-preview img {
+  max-width: 100px;
+  max-height: 80px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.reply-image-preview button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.link-text {
+  color: var(--primary-color, #ff7f50);
+  cursor: pointer;
+}
+
+.link-text:hover {
+  text-decoration: underline;
+}
+
 /* BUTTONS */
 .btn-cancel-report,
 .btn-admin-accept,
@@ -179,6 +269,24 @@
   display: flex;
   gap: 10px;
   margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-actions textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.notif-actions textarea:focus {
+  outline: none;
+  border-color: #ff7f50;
 }
 
 .btn-admin-accept {

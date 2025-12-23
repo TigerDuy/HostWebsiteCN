@@ -10,8 +10,36 @@
   font-size: 32px;
   font-weight: 700;
   color: #333;
+  margin: 0;
+}
+
+.my-recipes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 30px;
-  text-align: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.btn-create-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ff7f50 0%, #ff6347 100%);
+  color: white;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(255, 127, 80, 0.3);
+}
+
+.btn-create-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 127, 80, 0.4);
 }
 
 .my-recipes-container .recipe-grid-overlay {
