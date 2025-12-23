@@ -1,6 +1,7 @@
 # Node.js
 src/backend/node_modules/
 src/cookshare/node_modules/
+src/node_modules/
 
 # Env files and git config
 .env
