@@ -1,0 +1,15 @@
+{
+  "name": "cookshare-workspace",
+  "version": "1.0.0",
+  "description": "CookShare Full Stack Application",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && npm start",
+    "frontend": "cd cookshare && npm start",
+    "install:all": "cd backend && npm install && cd ../cookshare && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
