@@ -51,7 +51,8 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Hệ thống thông báo (notifications)
 -  Tùy chỉnh giao diện (theme customization)
 -  Chia sẻ theme với cộng đồng
--  Hệ thống thông báo (notifications)
+-  Broadcast thông báo đến tất cả users
+-  Quản lý nội quy cộng đồng
 
 #### **Giao Diện**
 -  Responsive design (PC, tablet, mobile)
@@ -61,6 +62,8 @@ Một website hiện đại để chia sẻ, tìm kiếm và đánh giá các c�
 -  Chia sẻ theme (export/import JSON)
 -  Thị trường theme công khai
 -  Dark mode support
+-  Image Lightbox (zoom ảnh)
+-  Trang nội quy cộng đồng
 
 ---
 
@@ -212,8 +215,16 @@ PUT  /report/:id            - Xử lý báo cáo (admin only, status: processing
 
 ### Notifications
 ```
-GET  /notification/list     - Danh sách thông báo
-POST /notification/mark-read/:id - Đánh dấu đã đọc
+GET  /notification/list              - Danh sách thông báo
+POST /notification/mark-read/:id     - Đánh dấu đã đọc
+POST /notification/mark-all-read     - Đánh dấu tất cả đã đọc
+POST /notification/broadcast         - Gửi thông báo broadcast (admin)
+```
+
+### Rules (Nội quy)
+```
+GET  /rules                          - Lấy nội quy
+PUT  /rules                          - Cập nhật nội quy (admin)
 ```
 
 ### Theme
@@ -252,7 +263,12 @@ DoAnChuyenNganh/
 │   │   ├── recipe.js
 │   │   ├── favorite.js
 │   │   ├── rating.js
-│   │   └── admin.js
+│   │   ├── admin.js
+│   │   ├── follow.js
+│   │   ├── theme.js
+│   │   ├── report.js
+│   │   ├── notification.js
+│   │   └── rules.js
 │   ├── middleware/
 │   │   └── auth.js
 │   ├── uploads/
@@ -264,7 +280,15 @@ DoAnChuyenNganh/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Navbar.jsx
-│   │   │   └── Navbar.css
+│   │   │   ├── Navbar.css
+│   │   │   ├── Footer.jsx
+│   │   │   ├── Footer.css
+│   │   │   ├── ImageLightbox.jsx
+│   │   │   ├── ImageLightbox.css
+│   │   │   ├── ReportButton.jsx
+│   │   │   ├── BroadcastNotification.jsx
+│   │   │   ├── RulesModal.jsx
+│   │   │   └── RoleChecker.jsx
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
@@ -273,8 +297,18 @@ DoAnChuyenNganh/
 │   │   │   ├── MyRecipes.jsx
 │   │   │   ├── RecipeDetail.jsx
 │   │   │   ├── AdminDashboard.jsx
+│   │   │   ├── AdminReports.jsx
 │   │   │   ├── Search.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── UserProfile.jsx
+│   │   │   ├── Favorites.jsx
+│   │   │   ├── Notifications.jsx
+│   │   │   ├── ThemeCustomization.jsx
+│   │   │   ├── ThemeMarketplace.jsx
+│   │   │   ├── Rules.jsx
 │   │   │   └── *.css
+│   │   ├── hooks/
+│   │   │   └── useRoleChecker.js
 │   │   ├── App.js
 │   │   ├── index.css
 │   │   └── index.js
@@ -299,6 +333,10 @@ DoAnChuyenNganh/
 - [x] View counter với spam protection
 - [x] Thông báo (notifications)
 - [x] Hệ thống báo cáo (report system)
+- [x] Broadcast thông báo từ admin
+- [x] Trang nội quy cộng đồng
+- [x] Image Lightbox component
+- [x] Role checker (kiểm tra quyền admin)
 - [ ] Lọc theo danh mục
 - [ ] Tạo collection công thức
 - [ ] Chia sẻ công thức qua mạng xã hội

@@ -58,21 +58,28 @@ app.use("/report", reportRoutes);
 const notificationRoutes = require("./routes/notification");
 app.use("/notification", notificationRoutes);
 
-// ✅ Scheduled Tasks - chạy mỗi giờ
-const scheduledTasks = require("./scripts/scheduled_tasks");
+// ✅ Scheduled Tasks - chạy mỗi giờ (optional, không crash nếu lỗi)
+let scheduledTasks = null;
+try {
+  scheduledTasks = require("./scripts/scheduled_tasks");
+} catch (err) {
+  console.warn("⚠️ Không load được scheduled_tasks:", err.message);
+}
 
-// Chạy ngay khi server khởi động
-setTimeout(() => {
-  scheduledTasks.runAllTasks();
-}, 5000);
+if (scheduledTasks) {
+  // Chạy ngay khi server khởi động
+  setTimeout(() => {
+    scheduledTasks.runAllTasks();
+  }, 5000);
 
-// Chạy mỗi giờ
-setInterval(() => {
-  scheduledTasks.runAllTasks();
-}, 60 * 60 * 1000); // 1 giờ
+  // Chạy mỗi giờ
+  setInterval(() => {
+    scheduledTasks.runAllTasks();
+  }, 60 * 60 * 1000); // 1 giờ
+}
 
 // ✅ Start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Backend đang chạy tại port ${PORT}`);
 });

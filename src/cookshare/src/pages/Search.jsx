@@ -171,7 +171,7 @@ function Search() {
                   ) : (
                     <div className="recipe-card-placeholder">🍳</div>
                   )}
-                  <div className="recipe-card-overlay">
+                  <div className="recipe-card-rating-badge">
                     <span className="recipe-rating">⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
                   </div>
                 </div>

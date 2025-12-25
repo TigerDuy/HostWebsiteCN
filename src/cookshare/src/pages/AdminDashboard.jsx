@@ -261,7 +261,7 @@ function AdminDashboard() {
     }
   };
 
-  const changeUserRole = async (id, currentRole) => {
+  const changeUserRole = async (id, currentRole, selectedRole = null) => {
     const currentUserId = localStorage.getItem("userId");
     
     // Ngăn admin tự sửa role của chính mình
@@ -270,9 +270,18 @@ function AdminDashboard() {
       return;
     }
 
-    // Xác định role tiếp theo (vòng lặp: user → moderator → admin → user)
-    const roleMap = { user: "moderator", moderator: "admin", admin: "user" };
-    let newRole = roleMap[currentRole] || "moderator";
+    // Nếu có selectedRole từ dropdown → dùng nó, không thì dùng vòng lặp
+    let newRole;
+    if (selectedRole && selectedRole !== currentRole) {
+      newRole = selectedRole;
+    } else if (selectedRole === currentRole) {
+      // Không thay đổi gì
+      return;
+    } else {
+      // Fallback: vòng lặp user → moderator → admin → user
+      const roleMap = { user: "moderator", moderator: "admin", admin: "user" };
+      newRole = roleMap[currentRole] || "moderator";
+    }
     
     // Nếu là moderator → không thể tạo Admin
     const currentUserRole = localStorage.getItem("role");
