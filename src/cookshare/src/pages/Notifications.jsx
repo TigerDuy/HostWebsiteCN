@@ -60,7 +60,14 @@ function Notifications() {
     try {
       const token = localStorage.getItem("token");
       const report = reports.find(r => r.id === reportId);
-      const targetId = targetType === "recipe" ? report.recipe_id : report.comment_id;
+      let targetId;
+      if (targetType === "recipe") {
+        targetId = report.recipe_id;
+      } else if (targetType === "comment") {
+        targetId = report.comment_id;
+      } else if (targetType === "user") {
+        targetId = report.reported_user_id;
+      }
       
       await axios.delete(`/report/${targetType}/${targetId}`, {
         headers: { Authorization: `Bearer ${token}` },

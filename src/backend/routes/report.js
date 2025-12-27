@@ -423,6 +423,25 @@ router.delete("/comment/:id", verifyToken, (req, res) => {
   );
 });
 
+router.delete("/user/:id", verifyToken, (req, res) => {
+  const reportedUserId = req.params.id;
+  const userId = req.user.id;
+
+  db.query(
+    "DELETE FROM bao_cao WHERE reported_user_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'user'",
+    [reportedUserId, userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
+      }
+
+      restoreReportQuota(userId, "user", () => {});
+      return res.json({ message: "✅ Hủy báo cáo thành công!" });
+    }
+  );
+});
+
 // ============ API LẤY QUOTA BÁO CÁO ============
 router.get("/quota", verifyToken, (req, res) => {
   const userId = req.user.id;
