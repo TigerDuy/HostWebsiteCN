@@ -294,6 +294,46 @@
   color: white;
 }
 
+/* SHARE BUTTON */
+.share-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  background: white;
+  border: 2px solid #4CAF50;
+  color: #4CAF50;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.share-btn:hover {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+}
+
+/* EDIT BUTTON (Author only) */
+.edit-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  background: white;
+  border: 2px solid #2196F3;
+  color: #2196F3;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+}
+
 .section {
   background: white;
   padding: 20px;

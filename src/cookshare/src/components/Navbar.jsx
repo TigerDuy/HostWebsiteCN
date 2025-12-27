@@ -11,6 +11,7 @@ function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,11 +31,28 @@ function Navbar() {
       setUsername("");
       setRole("");
       setAvatar("");
+      setUnreadCount(0);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    
+    try {
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_BASE || "http://localhost:3001"}/notification/unread-count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUnreadCount(res.data.unread || 0);
+    } catch (e) {
+      console.error("Lỗi lấy số thông báo:", e);
     }
   };
 
   useEffect(() => {
     updateAuthStatus();
+    fetchUnreadCount();
 
     const tryFetchProfileAvatar = async () => {
       const token = localStorage.getItem("token");
@@ -56,8 +74,14 @@ function Navbar() {
     };
     tryFetchProfileAvatar();
 
-    const handleStorageChange = () => updateAuthStatus();
-    const handleAuthUpdated = () => updateAuthStatus();
+    const handleStorageChange = () => {
+      updateAuthStatus();
+      fetchUnreadCount();
+    };
+    const handleAuthUpdated = () => {
+      updateAuthStatus();
+      fetchUnreadCount();
+    };
     const handleAvatarUpdated = () => updateAuthStatus();
 
     window.addEventListener("storage", handleStorageChange);
@@ -70,11 +94,15 @@ function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
 
+    // Poll for unread count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("auth-updated", handleAuthUpdated);
       window.removeEventListener("avatar-updated", handleAvatarUpdated);
       window.removeEventListener("scroll", handleScroll);
+      clearInterval(interval);
     };
   }, []);
 
@@ -197,6 +225,7 @@ function Navbar() {
                   <div className="dropdown-divider"></div>
                   <Link to="/notifications" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
                     <span>🔔</span> Thông báo
+                    {unreadCount > 0 && <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
                   </Link>
                   <Link to="/settings" className="dropdown-item" onClick={() => { setShowDropdown(false); closeMobileMenu(); }}>
                     <span>⚙️</span> Cài đặt

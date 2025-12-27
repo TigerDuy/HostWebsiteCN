@@ -357,4 +357,36 @@ router.get("/unread-count", verifyToken, (req, res) => {
   });
 });
 
+// ✅ Đánh dấu tất cả đã đọc
+router.put("/read-all", verifyToken, (req, res) => {
+  const userId = req.user.id;
+
+  // Đánh dấu tất cả thông báo cá nhân đã đọc
+  db.query(
+    "UPDATE notifications SET is_read = TRUE WHERE receiver_id = ? AND is_read = FALSE",
+    [userId],
+    (err) => {
+      if (err) {
+        console.error("❌ Lỗi đánh dấu đã đọc:", err);
+        return res.status(500).json({ message: "❌ Lỗi cập nhật" });
+      }
+
+      // Đánh dấu tất cả broadcast đã đọc
+      db.query(
+        `INSERT IGNORE INTO user_broadcast_read (user_id, broadcast_id)
+         SELECT ?, bn.id FROM broadcast_notifications bn
+         WHERE NOT EXISTS (SELECT 1 FROM user_broadcast_read WHERE broadcast_id = bn.id AND user_id = ?)`,
+        [userId, userId],
+        (err2) => {
+          if (err2) {
+            console.error("❌ Lỗi đánh dấu broadcast đã đọc:", err2);
+            return res.status(500).json({ message: "❌ Lỗi cập nhật" });
+          }
+          res.json({ message: "✅ Đã đánh dấu tất cả đã đọc" });
+        }
+      );
+    }
+  );
+});
+
 module.exports = router;

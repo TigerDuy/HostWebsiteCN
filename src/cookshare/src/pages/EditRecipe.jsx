@@ -21,6 +21,57 @@ function EditRecipe() {
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [openIngredientMenuIndex, setOpenIngredientMenuIndex] = useState(null);
 
+  // New states for category, cuisine, tags
+  const [category, setCategory] = useState("other");
+  const [cuisine, setCuisine] = useState("other");
+  const [filters, setFilters] = useState({ categories: [], cuisines: [] });
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [newTagName, setNewTagName] = useState("");
+
+  // Fetch filters and tags on mount
+  useEffect(() => {
+    const fetchFiltersAndTags = async () => {
+      try {
+        const [filtersRes, tagsRes] = await Promise.all([
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/filters`),
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags`)
+        ]);
+        setFilters(filtersRes.data);
+        setAvailableTags(tagsRes.data || []);
+      } catch (err) {
+        console.error("Lỗi lấy filters/tags:", err);
+      }
+    };
+    fetchFiltersAndTags();
+  }, []);
+
+  const toggleTag = (tagId) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const handleAddNewTag = async () => {
+    if (!newTagName.trim() || newTagName.length < 2) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags`,
+        { name: newTagName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newTag = res.data;
+      setAvailableTags(prev => [...prev, newTag]);
+      setSelectedTags(prev => [...prev, newTag.id]);
+      setNewTagName("");
+    } catch (err) {
+      console.error("Lỗi tạo tag:", err);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -63,6 +114,16 @@ function EditRecipe() {
         // Optional fields if present in API
         setServings(r.servings || "0");
         setCookTime(r.cook_time || "0");
+        setCategory(r.category || "other");
+        setCuisine(r.cuisine || "other");
+
+        // Fetch recipe tags
+        try {
+          const tagsRes = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags/${id}`);
+          setSelectedTags((tagsRes.data || []).map(t => t.id));
+        } catch (e) {
+          console.error("Lỗi lấy tags công thức:", e);
+        }
       } catch (e) {
         setError("❌ Không tải được công thức!");
       }
@@ -213,6 +274,8 @@ function EditRecipe() {
     formData.append("steps", steps);
     formData.append("servings", servings || "0");
     formData.append("cook_time", cookTime || "0");
+    formData.append("category", category);
+    formData.append("cuisine", cuisine);
     if (coverImage) formData.append("image", coverImage);
 
     try {
@@ -220,6 +283,13 @@ function EditRecipe() {
       await axios.put(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/update/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
+
+      // Update tags
+      await axios.put(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags/${id}`,
+        { tagIds: selectedTags },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       // Upload ảnh từng bước
       for (let i = 0; i < stepsList.length; i++) {
@@ -296,6 +366,57 @@ function EditRecipe() {
           <div className="form-section">
             <label className="form-label">Tên món:</label>
             <input type="text" placeholder="Tên món" value={title} onChange={(e) => setTitle(e.target.value)} className="form-input" />
+          </div>
+
+          {/* Category & Cuisine */}
+          <div className="form-section">
+            <h3 className="section-title">Phân loại</h3>
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">Loại món</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="form-select">
+                  {filters.categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="field-label">Ẩm thực</label>
+                <select value={cuisine} onChange={(e) => setCuisine(e.target.value)} className="form-select">
+                  {filters.cuisines.map(cui => (
+                    <option key={cui.value} value={cui.value}>{cui.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="form-section">
+            <h3 className="section-title">Tags</h3>
+            <div className="tags-selection">
+              {availableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => toggleTag(tag.id)}
+                  className={`tag-btn ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+            <div className="add-tag-row">
+              <input
+                type="text"
+                placeholder="Thêm tag mới..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="form-input-small"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewTag())}
+              />
+              <button type="button" onClick={handleAddNewTag} className="add-tag-btn">+ Thêm</button>
+            </div>
           </div>
 
           <div className="form-section">

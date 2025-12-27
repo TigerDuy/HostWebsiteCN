@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import FollowButton from './FollowButton';
 import ReportButton from './ReportButton';
+import FollowListModal from './FollowListModal';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import AvatarCropper from './AvatarCropper';
@@ -11,6 +12,7 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
   const [uploading, setUploading] = useState(false);
   const [showCrop, setShowCrop] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showFollowModal, setShowFollowModal] = useState(null); // 'followers' | 'following' | null
 
   if (!user) return null;
 
@@ -76,8 +78,18 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
           <h2>{user.username}</h2>
           {user.bio && <p className="ph-bio">{user.bio}</p>}
           <div className="ph-counts">
-            <span>Followers: <strong>{counts.followers}</strong></span>
-            <span>Following: <strong>{counts.following}</strong></span>
+            <span 
+              className="ph-count-item clickable"
+              onClick={() => setShowFollowModal('followers')}
+            >
+              <strong>{counts.followers}</strong> Người theo dõi
+            </span>
+            <span 
+              className="ph-count-item clickable"
+              onClick={() => setShowFollowModal('following')}
+            >
+              <strong>{counts.following}</strong> Đang theo dõi
+            </span>
           </div>
         </div>
       </div>
@@ -96,6 +108,15 @@ export default function ProfileHeader({ user, counts = { followers:0, following:
           </>
         )}
       </div>
+
+      {/* Follow List Modal */}
+      {showFollowModal && (
+        <FollowListModal
+          userId={user.id}
+          type={showFollowModal}
+          onClose={() => setShowFollowModal(null)}
+        />
+      )}
     </div>
   );
 }

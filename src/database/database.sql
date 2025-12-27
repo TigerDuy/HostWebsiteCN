@@ -150,6 +150,17 @@ CREATE TABLE recipe_violation_history (
   FOREIGN KEY (report_id) REFERENCES bao_cao(id) ON DELETE CASCADE
 );
 
+-- ✅ BẢNG LỊCH SỬ VI PHẠM BÌNH LUẬN
+CREATE TABLE comment_violation_history (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  comment_id INT NOT NULL,  -- Không có FK vì comment sẽ bị xóa
+  user_id INT NOT NULL,
+  report_id INT NOT NULL,
+  violated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES nguoi_dung(id) ON DELETE CASCADE,
+  FOREIGN KEY (report_id) REFERENCES bao_cao(id) ON DELETE CASCADE
+);
+
 -- ✅ BẢNG THÔNG BÁO
 CREATE TABLE notifications (
   id INT PRIMARY KEY AUTO_INCREMENT,
@@ -183,5 +194,7 @@ CREATE INDEX idx_bao_cao_user ON bao_cao(reported_user_id);
 CREATE INDEX idx_bao_cao_status ON bao_cao(status);
 CREATE INDEX idx_bao_cao_target_type ON bao_cao(target_type);
 CREATE INDEX idx_violation_history_recipe ON recipe_violation_history(recipe_id);
+CREATE INDEX idx_comment_violation_user ON comment_violation_history(user_id);
+CREATE INDEX idx_comment_violation_date ON comment_violation_history(violated_at);
 CREATE INDEX idx_notifications_receiver ON notifications(receiver_id);
 CREATE INDEX idx_notifications_type ON notifications(type);

@@ -93,16 +93,37 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
       }
     }
 
+    const category = req.body.category || 'other';
+    const cuisine = req.body.cuisine || 'other';
+    const tagIds = req.body.tags ? JSON.parse(req.body.tags) : [];
+
     db.query(
-      "INSERT INTO cong_thuc (user_id, title, ingredients, steps, image_url, servings, cook_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
-      [user_id, title, ingredients, steps, imageUrl, req.body.servings || "0", req.body.cook_time || "0"],
+      "INSERT INTO cong_thuc (user_id, title, ingredients, steps, image_url, servings, cook_time, category, cuisine, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+      [user_id, title, ingredients, steps, imageUrl, req.body.servings || "0", req.body.cook_time || "0", category, cuisine],
       (err, result) => {
         if (err) {
           return res.status(500).json({ message: "❌ Lỗi tạo công thức!" });
         }
+        
+        const recipeId = result.insertId;
+        
+        // Add tags if provided
+        if (tagIds.length > 0) {
+          const tagValues = tagIds.map(tagId => [recipeId, tagId]);
+          db.query(
+            "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
+            [tagValues],
+            (tagErr) => {
+              if (tagErr) console.warn("⚠️ Lỗi thêm tags:", tagErr.message);
+              // Update usage count
+              db.query("UPDATE tags SET usage_count = (SELECT COUNT(*) FROM recipe_tags WHERE tag_id = tags.id)");
+            }
+          );
+        }
+        
         res.json({ 
           message: "✅ Tạo công thức thành công!",
-          id: result.insertId 
+          id: recipeId 
         });
       }
     );
@@ -111,27 +132,200 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
   }
 });
 
-// ✅ API lấy danh sách công thức (với stats)
+// ✅ API lấy danh sách công thức (với stats, filter, pagination)
 router.get("/list", (req, res) => {
-  db.query(`
-    SELECT 
-      cong_thuc.*,
-      nguoi_dung.username,
-      nguoi_dung.avatar_url,
-      COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
-      COUNT(DISTINCT danh_gia.id) as rating_count,
-      COUNT(DISTINCT favorite.id) as favorite_count
-    FROM cong_thuc 
-    JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
-    LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
-    LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
-    WHERE cong_thuc.is_hidden = FALSE
-    GROUP BY cong_thuc.id
-    ORDER BY avg_rating DESC, cong_thuc.created_at DESC
-  `, (err, result) => {
-    if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy danh sách công thức!" });
-    res.json(result);
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const offset = (page - 1) * limit;
+  const category = req.query.category || null;
+  const cuisine = req.query.cuisine || null;
+  const tag = req.query.tag || null;
+
+  // Build WHERE conditions
+  let conditions = ["cong_thuc.is_hidden = FALSE"];
+  let params = [];
+
+  if (category) {
+    conditions.push("cong_thuc.category = ?");
+    params.push(category);
+  }
+  if (cuisine) {
+    conditions.push("cong_thuc.cuisine = ?");
+    params.push(cuisine);
+  }
+
+  let joinTag = "";
+  if (tag) {
+    joinTag = "JOIN recipe_tags rt ON cong_thuc.id = rt.recipe_id JOIN tags t ON rt.tag_id = t.id";
+    conditions.push("t.slug = ?");
+    params.push(tag);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Count total
+  db.query(
+    `SELECT COUNT(DISTINCT cong_thuc.id) as total 
+     FROM cong_thuc 
+     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+     ${joinTag}
+     ${whereClause}`,
+    params,
+    (err, countResult) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi đếm công thức!" });
+
+      const total = countResult[0].total;
+
+      db.query(`
+        SELECT 
+          cong_thuc.*,
+          nguoi_dung.username,
+          nguoi_dung.avatar_url,
+          COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
+          COUNT(DISTINCT danh_gia.id) as rating_count,
+          COUNT(DISTINCT favorite.id) as favorite_count
+        FROM cong_thuc 
+        JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
+        ${joinTag}
+        LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
+        LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
+        ${whereClause}
+        GROUP BY cong_thuc.id
+        ORDER BY rating_count DESC, avg_rating DESC, cong_thuc.created_at DESC
+        LIMIT ? OFFSET ?
+      `, [...params, limit, offset], (err, result) => {
+        if (err) return res.status(500).json({ message: "❌ Lỗi khi lấy danh sách công thức!" });
+        res.json({
+          data: result,
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        });
+      });
+    }
+  );
+});
+
+// ✅ API lấy danh sách tags
+router.get("/tags", (req, res) => {
+  db.query(
+    "SELECT * FROM tags ORDER BY usage_count DESC, name ASC",
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi lấy tags!" });
+      res.json(result);
+    }
+  );
+});
+
+// ✅ API tạo tag mới
+router.post("/tags", verifyToken, (req, res) => {
+  const { name } = req.body;
+  if (!name || name.trim().length < 2) {
+    return res.status(400).json({ message: "❌ Tên tag phải có ít nhất 2 ký tự!" });
+  }
+
+  const slug = name.trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  db.query(
+    "INSERT INTO tags (name, slug) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id",
+    [name.trim(), slug],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi tạo tag!" });
+      
+      // Get the tag (either new or existing)
+      db.query("SELECT * FROM tags WHERE slug = ?", [slug], (err, tags) => {
+        if (err || !tags.length) return res.status(500).json({ message: "❌ Lỗi lấy tag!" });
+        res.json(tags[0]);
+      });
+    }
+  );
+});
+
+// ✅ API lấy tags của một công thức
+router.get("/tags/:recipeId", (req, res) => {
+  const { recipeId } = req.params;
+  db.query(
+    `SELECT t.* FROM tags t 
+     JOIN recipe_tags rt ON t.id = rt.tag_id 
+     WHERE rt.recipe_id = ?`,
+    [recipeId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi lấy tags!" });
+      res.json(result);
+    }
+  );
+});
+
+// ✅ API cập nhật tags cho công thức
+router.put("/tags/:recipeId", verifyToken, (req, res) => {
+  const { recipeId } = req.params;
+  const { tagIds } = req.body; // Array of tag IDs
+  const userId = req.user.id;
+
+  // Verify ownership
+  db.query("SELECT user_id FROM cong_thuc WHERE id = ?", [recipeId], (err, result) => {
+    if (err || !result.length) return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
+    if (result[0].user_id !== userId) return res.status(403).json({ message: "❌ Không có quyền!" });
+
+    // Delete old tags
+    db.query("DELETE FROM recipe_tags WHERE recipe_id = ?", [recipeId], (err) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi xóa tags cũ!" });
+
+      if (!tagIds || tagIds.length === 0) {
+        return res.json({ message: "✅ Đã cập nhật tags!" });
+      }
+
+      // Insert new tags
+      const values = tagIds.map(tagId => [recipeId, tagId]);
+      db.query(
+        "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
+        [values],
+        (err) => {
+          if (err) return res.status(500).json({ message: "❌ Lỗi thêm tags!" });
+          
+          // Update usage count
+          db.query(
+            "UPDATE tags SET usage_count = (SELECT COUNT(*) FROM recipe_tags WHERE tag_id = tags.id)"
+          );
+          
+          res.json({ message: "✅ Đã cập nhật tags!" });
+        }
+      );
+    });
   });
+});
+
+// ✅ API lấy danh sách categories và cuisines
+router.get("/filters", (req, res) => {
+  const categories = [
+    { value: 'main', label: 'Món chính' },
+    { value: 'appetizer', label: 'Khai vị' },
+    { value: 'dessert', label: 'Tráng miệng' },
+    { value: 'drink', label: 'Đồ uống' },
+    { value: 'soup', label: 'Canh/Súp' },
+    { value: 'salad', label: 'Salad' },
+    { value: 'snack', label: 'Ăn vặt' },
+    { value: 'other', label: 'Khác' }
+  ];
+
+  const cuisines = [
+    { value: 'vietnam', label: 'Việt Nam' },
+    { value: 'korea', label: 'Hàn Quốc' },
+    { value: 'japan', label: 'Nhật Bản' },
+    { value: 'china', label: 'Trung Quốc' },
+    { value: 'thailand', label: 'Thái Lan' },
+    { value: 'italy', label: 'Ý' },
+    { value: 'france', label: 'Pháp' },
+    { value: 'usa', label: 'Mỹ' },
+    { value: 'other', label: 'Khác' }
+  ];
+
+  res.json({ categories, cuisines });
 });
 
 // ✅ API tìm kiếm công thức (với stats)
@@ -462,14 +656,16 @@ router.put("/update/:id", verifyToken, upload.single("image"), async (req, res) 
     const recipeId = req.params.id;
     const { title, ingredients, steps } = req.body;
     const user_id = req.user.id;
+    const category = req.body.category || 'other';
+    const cuisine = req.body.cuisine || 'other';
 
     if (!title || !ingredients || !steps) {
       return res.status(400).json({ message: "❌ Vui lòng điền đầy đủ thông tin!" });
     }
 
     // Nếu có ảnh mới, upload lên Cloudinary
-    let updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", recipeId, user_id];
-    let updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=? WHERE id=? AND user_id=?";
+    let updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", category, cuisine, recipeId, user_id];
+    let updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=?, category=?, cuisine=? WHERE id=? AND user_id=?";
 
     if (req.file) {
       let newImageUrl = null;
@@ -498,8 +694,8 @@ router.put("/update/:id", verifyToken, upload.single("image"), async (req, res) 
       }
 
       if (newImageUrl) {
-        updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", newImageUrl, recipeId, user_id];
-        updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=?, image_url=? WHERE id=? AND user_id=?";
+        updateData = [title, ingredients, steps, req.body.servings || "0", req.body.cook_time || "0", category, cuisine, newImageUrl, recipeId, user_id];
+        updateQuery = "UPDATE cong_thuc SET title=?, ingredients=?, steps=?, servings=?, cook_time=?, category=?, cuisine=?, image_url=? WHERE id=? AND user_id=?";
       }
     }
 

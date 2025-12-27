@@ -16,6 +16,7 @@ function Notifications() {
   const [replyImage, setReplyImage] = useState({});
   const [replyImagePreview, setReplyImagePreview] = useState({});
   const [replyingId, setReplyingId] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const userRole = localStorage.getItem("role");
   const navigate = useNavigate();
   const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:3001";
@@ -28,7 +29,8 @@ function Notifications() {
 
       const promises = [
         axios.get("/report/my-reports", { headers }),
-        axios.get("/notification/my", { headers })
+        axios.get("/notification/my", { headers }),
+        axios.get("/notification/unread-count", { headers })
       ];
       if (userRole === "admin" || userRole === "moderator") {
         promises.push(axios.get("/report?status=pending", { headers }));
@@ -37,8 +39,9 @@ function Notifications() {
       const results = await Promise.all(promises);
       setReports(results[0]?.data || []);
       setNotifications(results[1]?.data || []);
+      setUnreadCount(results[2]?.data?.unread || 0);
       if (userRole === "admin" || userRole === "moderator") {
-        setAdminNotifications(results[2]?.data || []);
+        setAdminNotifications(results[3]?.data || []);
       }
     } catch (err) {
       console.error("❌ Lỗi lấy dữ liệu thông báo/báo cáo:", err);
@@ -186,8 +189,48 @@ function Notifications() {
       await axios.put(`/notification/broadcast/${broadcastId}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Update local state
+      setNotifications(prev => prev.map(n => 
+        n.notification_type === "broadcast" && n.id === broadcastId 
+          ? { ...n, is_read: true } 
+          : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error("Lỗi đánh dấu đã đọc:", err);
+    }
+  };
+
+  const handleMarkPersonalRead = async (notifId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`/notification/${notifId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Update local state
+      setNotifications(prev => prev.map(n => 
+        n.notification_type !== "broadcast" && n.id === notifId 
+          ? { ...n, is_read: true } 
+          : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Lỗi đánh dấu đã đọc:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put("/notification/read-all", {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Lỗi đánh dấu tất cả đã đọc:", err);
+      alert("❌ Lỗi đánh dấu tất cả đã đọc!");
     }
   };
 
@@ -284,7 +327,14 @@ function Notifications() {
       {/* INBOX NOTIFICATIONS */}
       {activeTab === "inbox" && (
         <section className="notif-section">
-          <h2>🔔 Thông báo</h2>
+          <div className="notif-section-header">
+            <h2>🔔 Thông báo</h2>
+            {unreadCount > 0 && (
+              <button className="btn-mark-all-read" onClick={handleMarkAllRead}>
+                ✓ Đánh dấu tất cả đã đọc
+              </button>
+            )}
+          </div>
           {notifications.length > 0 ? (
             <div className="notif-list">
               {notifications.map((item) => {
@@ -297,21 +347,26 @@ function Notifications() {
                 }
                 const alreadyReplied = meta.has_reply === true;
                 const isReplyNotif = item.type === "reply";
+                const isUnread = !item.is_read;
 
                 return (
                   <div 
                     key={`${item.notification_type || "personal"}-${item.id}`} 
-                    className={`notif-card ${!item.is_read ? "unread" : ""} ${isBroadcast ? "broadcast" : ""}`}
-                    onClick={() => isBroadcast && !item.is_read && handleMarkBroadcastRead(item.id)}
+                    className={`notif-card ${isUnread ? "unread" : ""} ${isBroadcast ? "broadcast" : ""}`}
                   >
                     <div className="notif-header">
                       <h4>
                         {isBroadcast ? "📢 Thông báo chung" : `Từ ${item.sender_name}`}
                         {item.sender_role && !isBroadcast ? ` (${item.sender_role})` : ""}
                       </h4>
-                      <span className="notif-status">
-                        {isBroadcast ? "📢 Broadcast" : item.type === "report_warning" ? "⚠️ Cảnh báo" : item.type === "reply" ? "💬 Phản hồi" : "🔔 Thông báo"}
-                      </span>
+                      <div className="notif-header-right">
+                        {isUnread && (
+                          <span className="unread-badge">Chưa đọc</span>
+                        )}
+                        <span className="notif-status">
+                          {isBroadcast ? "📢 Broadcast" : item.type === "report_warning" ? "⚠️ Cảnh báo" : item.type === "reply" ? "💬 Phản hồi" : "🔔 Thông báo"}
+                        </span>
+                      </div>
                     </div>
                     <div className="notif-body">
                       <p><b>Nội dung:</b> {item.message}</p>
@@ -330,6 +385,16 @@ function Notifications() {
                         </p>
                       )}
                     </div>
+
+                    {/* Nút đánh dấu đã đọc */}
+                    {isUnread && (
+                      <button 
+                        className="btn-mark-read"
+                        onClick={() => isBroadcast ? handleMarkBroadcastRead(item.id) : handleMarkPersonalRead(item.id)}
+                      >
+                        ✓ Đánh dấu đã đọc
+                      </button>
+                    )}
                     
                     {!isBroadcast && !alreadyReplied && !isReplyNotif && (
                       <div className="notif-actions">

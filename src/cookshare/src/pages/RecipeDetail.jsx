@@ -548,7 +548,7 @@ function RecipeDetail() {
         </div>
       </div>
 
-      {/* ✅ YÊU THÍCH */}
+      {/* ✅ YÊU THÍCH & CHIA SẺ */}
       <div className="action-buttons">
         {!!recipe.is_hidden && (
           <div className="hidden-notice">
@@ -560,11 +560,48 @@ function RecipeDetail() {
             )}
           </div>
         )}
+
+        {/* ✅ CHỈNH SỬA (CHỈ TÁC GIẢ) */}
+        {localStorage.getItem("userId") === String(recipe.user_id) && (
+          <button
+            onClick={() => navigate(`/recipe/${id}/edit`)}
+            className="edit-btn"
+          >
+            ✏️ Chỉnh sửa
+          </button>
+        )}
+
         <button
           onClick={handleFavorite}
           className={`favorite-btn ${isFavorited ? "favorited" : ""}`}
         >
           {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu vào yêu thích"}
+        </button>
+
+        {/* ✅ CHIA SẺ */}
+        <button
+          onClick={() => {
+            const shareUrl = window.location.href;
+            const shareTitle = recipe.title || "Công thức nấu ăn";
+            const shareText = `Xem công thức "${shareTitle}" trên CookShare!`;
+            
+            if (navigator.share) {
+              navigator.share({
+                title: shareTitle,
+                text: shareText,
+                url: shareUrl
+              }).catch(() => {});
+            } else {
+              navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("✅ Đã sao chép link vào clipboard!");
+              }).catch(() => {
+                prompt("Sao chép link này:", shareUrl);
+              });
+            }
+          }}
+          className="share-btn"
+        >
+          📤 Chia sẻ
         </button>
         
         {/* ✅ BÁO CÁO */}

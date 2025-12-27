@@ -10,6 +10,7 @@ import ThemeMarketplace from "./pages/ThemeMarketplace";
 import Rules from "./pages/Rules";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 // Sử dụng trang tạo công thức mới (CreateRecipe.jsx)
 import CreateRecipe from "./pages/CreateRecipe";
 import RecipeDetail from "./pages/RecipeDetail";
@@ -63,6 +64,7 @@ function App() {
         </main>
 
         <Footer />
+        <ScrollToTop />
       </div>
     </BrowserRouter>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -17,7 +17,58 @@ function CreateRecipe() {
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [openIngredientMenuIndex, setOpenIngredientMenuIndex] = useState(null);
 
+  // New states for category, cuisine, tags
+  const [category, setCategory] = useState("other");
+  const [cuisine, setCuisine] = useState("other");
+  const [filters, setFilters] = useState({ categories: [], cuisines: [] });
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [newTagName, setNewTagName] = useState("");
+
   const navigate = useNavigate();
+
+  // Fetch filters and tags on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [filtersRes, tagsRes] = await Promise.all([
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/filters`),
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags`)
+        ]);
+        setFilters(filtersRes.data);
+        setAvailableTags(tagsRes.data || []);
+      } catch (err) {
+        console.error("Lỗi lấy filters/tags:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const toggleTag = (tagId) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const handleAddNewTag = async () => {
+    if (!newTagName.trim() || newTagName.length < 2) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags`,
+        { name: newTagName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const newTag = res.data;
+      setAvailableTags(prev => [...prev, newTag]);
+      setSelectedTags(prev => [...prev, newTag.id]);
+      setNewTagName("");
+    } catch (err) {
+      console.error("Lỗi tạo tag:", err);
+    }
+  };
 
   // Handle cover image
   const handleCoverChange = (e) => {
@@ -164,6 +215,9 @@ function CreateRecipe() {
     formData.append("steps", steps);
     formData.append("servings", servings || "0");
     formData.append("cook_time", cookTime || "0");
+    formData.append("category", category);
+    formData.append("cuisine", cuisine);
+    formData.append("tags", JSON.stringify(selectedTags));
     if (coverImage) formData.append("image", coverImage);
 
     try {
@@ -268,6 +322,57 @@ function CreateRecipe() {
               onChange={(e) => setTitle(e.target.value)}
               className="form-input"
             />
+          </div>
+
+          {/* Category & Cuisine */}
+          <div className="form-section">
+            <h3 className="section-title">Phân loại</h3>
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">Loại món</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="form-select">
+                  {filters.categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="field-label">Ẩm thực</label>
+                <select value={cuisine} onChange={(e) => setCuisine(e.target.value)} className="form-select">
+                  {filters.cuisines.map(cui => (
+                    <option key={cui.value} value={cui.value}>{cui.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="form-section">
+            <h3 className="section-title">Tags</h3>
+            <div className="tags-selection">
+              {availableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => toggleTag(tag.id)}
+                  className={`tag-btn ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+            <div className="add-tag-row">
+              <input
+                type="text"
+                placeholder="Thêm tag mới..."
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="form-input-small"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNewTag())}
+              />
+              <button type="button" onClick={handleAddNewTag} className="add-tag-btn">+ Thêm</button>
+            </div>
           </div>
 
           {/* Ingredients Section */}

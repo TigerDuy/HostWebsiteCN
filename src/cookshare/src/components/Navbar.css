@@ -367,6 +367,18 @@
   font-size: 1.1rem;
 }
 
+.notif-badge {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  min-width: 18px;
+  text-align: center;
+}
+
 .dropdown-logout {
   display: flex;
   align-items: center;
