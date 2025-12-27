@@ -74,31 +74,39 @@ function Profile() {
 
   const fetchCounts = async () => {
     try {
-      // TODO: Implement follow system
-      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/counts/${userId}`);
-      // setCounts(res.data || { followers: 0, following: 0 });
-      setCounts({ followers: 0, following: 0 });
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/counts/${userId}`);
+      setCounts(res.data || { followers: 0, following: 0 });
     } catch (err) {
-      // ignore
+      setCounts({ followers: 0, following: 0 });
     }
   };
 
   const fetchFollowers = async (page = 1) => {
     try {
-      // TODO: Implement follow system
-      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/followers/${userId}?page=${page}&limit=${followers.limit}`);
-      // setFollowers(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/followers/${userId}?page=${page}&limit=${followers.limit}`);
+      setFollowers(prev => ({ 
+        data: page === 1 ? res.data.data : prev.data.concat(res.data.data), 
+        page: res.data.page, 
+        total: res.data.total, 
+        limit: res.data.limit 
+      }));
+    } catch (err) {
       setFollowers({ data: [], page: 1, total: 0, limit: 10 });
-    } catch (err) {}
+    }
   };
 
   const fetchFollowing = async (page = 1) => {
     try {
-      // TODO: Implement follow system
-      // const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/following/${userId}?page=${page}&limit=${following.limit}`);
-      // setFollowing(prev => ({ data: page === 1 ? res.data.data : prev.data.concat(res.data.data), page: res.data.page, total: res.data.total, limit: res.data.limit }));
+      const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/follow/following/${userId}?page=${page}&limit=${following.limit}`);
+      setFollowing(prev => ({ 
+        data: page === 1 ? res.data.data : prev.data.concat(res.data.data), 
+        page: res.data.page, 
+        total: res.data.total, 
+        limit: res.data.limit 
+      }));
+    } catch (err) {
       setFollowing({ data: [], page: 1, total: 0, limit: 10 });
-    } catch (err) {}
+    }
   };
 
   const handleInputChange = (e) => {

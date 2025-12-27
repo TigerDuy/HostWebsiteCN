@@ -423,6 +423,25 @@ router.delete("/comment/:id", verifyToken, (req, res) => {
   );
 });
 
+router.delete("/user/:id", verifyToken, (req, res) => {
+  const reportedUserId = req.params.id;
+  const userId = req.user.id;
+
+  db.query(
+    "DELETE FROM bao_cao WHERE reported_user_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'user'",
+    [reportedUserId, userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
+      }
+
+      restoreReportQuota(userId, "user", () => {});
+      return res.json({ message: "✅ Hủy báo cáo thành công!" });
+    }
+  );
+});
+
 // ============ API LẤY QUOTA BÁO CÁO ============
 router.get("/quota", verifyToken, (req, res) => {
   const userId = req.user.id;
@@ -627,10 +646,26 @@ function handleAcceptedReport(report, processorId, res) {
       }
     });
   } else if (report.target_type === "comment") {
+    // Kiểm tra comment_author_id có tồn tại không
+    if (!report.comment_author_id) {
+      console.error("❌ Không tìm thấy tác giả bình luận, có thể bình luận đã bị xóa");
+      // Vẫn gửi response thành công vì báo cáo đã được xử lý
+      return res.json({
+        message: "✅ Xác nhận báo cáo thành công! (Bình luận có thể đã bị xóa trước đó)",
+        reportId: report.id,
+        reportStatus: "accepted",
+      });
+    }
+
     // Thêm vào lịch sử vi phạm bình luận
     db.query(
       `INSERT INTO comment_violation_history (comment_id, user_id, report_id) VALUES (?, ?, ?)`,
-      [report.comment_id, report.comment_author_id, report.id]
+      [report.comment_id, report.comment_author_id, report.id],
+      (err) => {
+        if (err) {
+          console.error("❌ Lỗi thêm lịch sử vi phạm bình luận:", err);
+        }
+      }
     );
 
     // Xóa bình luận vi phạm
@@ -638,6 +673,10 @@ function handleAcceptedReport(report, processorId, res) {
 
     // Kiểm tra số vi phạm bình luận của user
     countCommentViolationsThisMonth(report.comment_author_id, (err, count) => {
+      if (err) {
+        console.error("❌ Lỗi đếm vi phạm bình luận:", err);
+        count = 0;
+      }
       if (count >= CONFIG.COMMENT_VIOLATIONS_TO_BLOCK) {
         const blockUntil = new Date();
         blockUntil.setDate(blockUntil.getDate() + CONFIG.BLOCK_DURATION_DAYS);
@@ -651,7 +690,12 @@ function handleAcceptedReport(report, processorId, res) {
       }
     });
   } else if (report.target_type === "user") {
-    sendViolationEmail(report, "user_warning");
+    // Kiểm tra reported user có tồn tại không
+    if (!report.reported_email) {
+      console.error("❌ Không tìm thấy thông tin người dùng bị báo cáo");
+    } else {
+      sendViolationEmail(report, "user_warning");
+    }
   }
 
   // Gửi email cảm ơn người báo cáo

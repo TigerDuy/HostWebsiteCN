@@ -13,14 +13,60 @@ function Home() {
   const searchRef = useRef(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setLoading(true);
+  // Filter & Pagination states
+  const [filters, setFilters] = useState({ categories: [], cuisines: [] });
+  const [tags, setTags] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCuisine, setSelectedCuisine] = useState("");
+  const [selectedTag, setSelectedTag] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 12;
 
-    const fetchRecipes = async () => {
+  // Fetch filters and tags on mount
+  useEffect(() => {
+    const fetchFiltersAndTags = async () => {
       try {
-        const res = await axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/list`);
-        console.log("📦 Recipes loaded:", res.data?.length, res.data);
-        setRecipes(res.data || []);
+        const [filtersRes, tagsRes] = await Promise.all([
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/filters`),
+          axios.get(`${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/tags`)
+        ]);
+        setFilters(filtersRes.data);
+        setTags(tagsRes.data || []);
+      } catch (err) {
+        console.error("❌ Lỗi lấy filters/tags:", err);
+      }
+    };
+    fetchFiltersAndTags();
+  }, []);
+
+  // Fetch recipes with filters and pagination
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.append('page', page);
+        params.append('limit', limit);
+        if (selectedCategory) params.append('category', selectedCategory);
+        if (selectedCuisine) params.append('cuisine', selectedCuisine);
+        if (selectedTag) params.append('tag', selectedTag);
+
+        const res = await axios.get(
+          `${process.env.REACT_APP_API_BASE || 'http://localhost:3001'}/recipe/list?${params.toString()}`
+        );
+        
+        // Handle both old format (array) and new format (object with data)
+        if (Array.isArray(res.data)) {
+          setRecipes(res.data);
+          setTotal(res.data.length);
+          setTotalPages(1);
+        } else {
+          setRecipes(res.data.data || []);
+          setTotal(res.data.total || 0);
+          setTotalPages(res.data.totalPages || 1);
+        }
       } catch (err) {
         console.error("❌ Lỗi lấy công thức:", err);
       } finally {
@@ -29,7 +75,22 @@ function Home() {
     };
 
     fetchRecipes();
-  }, []);
+  }, [page, selectedCategory, selectedCuisine, selectedTag]);
+
+  // Reset page when filter changes
+  const handleFilterChange = (type, value) => {
+    setPage(1);
+    if (type === 'category') setSelectedCategory(value);
+    if (type === 'cuisine') setSelectedCuisine(value);
+    if (type === 'tag') setSelectedTag(value);
+  };
+
+  const clearFilters = () => {
+    setSelectedCategory("");
+    setSelectedCuisine("");
+    setSelectedTag("");
+    setPage(1);
+  };
 
   // Debounce search suggestions
   const fetchSuggestions = useCallback(async (query) => {
@@ -52,16 +113,13 @@ function Home() {
     }
   }, []);
 
-  // Debounce effect
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchSuggestions(searchTerm);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [searchTerm, fetchSuggestions]);
 
-  // Click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -91,7 +149,11 @@ function Home() {
     setShowSuggestions(true);
   };
 
-  if (loading) {
+  const [showAllTags, setShowAllTags] = useState(false);
+  const hasActiveFilters = selectedCategory || selectedCuisine || selectedTag;
+  const visibleTags = showAllTags ? tags : tags.slice(0, 8);
+
+  if (loading && page === 1) {
     return <div className="home-container"><h2>⏳ Đang tải...</h2></div>;
   }
 
@@ -118,21 +180,12 @@ function Home() {
             />
             {searchLoading && <span className="home-search-spinner">⏳</span>}
             
-            {/* Suggestions dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div className="home-search-suggestions">
                 {suggestions.map((recipe) => (
-                  <div
-                    key={recipe.id}
-                    className="suggestion-item"
-                    onClick={() => handleSuggestionClick(recipe)}
-                  >
+                  <div key={recipe.id} className="suggestion-item" onClick={() => handleSuggestionClick(recipe)}>
                     <div className="suggestion-image">
-                      {recipe.image_url ? (
-                        <img src={recipe.image_url} alt={recipe.title} />
-                      ) : (
-                        <div className="suggestion-placeholder">🍳</div>
-                      )}
+                      {recipe.image_url ? <img src={recipe.image_url} alt={recipe.title} /> : <div className="suggestion-placeholder">🍳</div>}
                     </div>
                     <div className="suggestion-info">
                       <p className="suggestion-title">{recipe.title}</p>
@@ -143,110 +196,192 @@ function Home() {
                     </div>
                   </div>
                 ))}
-                <div 
-                  className="suggestion-view-all"
-                  onClick={handleSearch}
-                >
+                <div className="suggestion-view-all" onClick={handleSearch}>
                   Xem tất cả kết quả cho "{searchTerm}"
                 </div>
               </div>
             )}
 
-            {/* No results */}
             {showSuggestions && searchTerm.length >= 2 && suggestions.length === 0 && !searchLoading && (
               <div className="home-search-suggestions">
-                <div className="suggestion-empty">
-                  Không tìm thấy công thức nào
-                </div>
+                <div className="suggestion-empty">Không tìm thấy công thức nào</div>
               </div>
             )}
           </div>
-          <button type="submit" className="home-search-button">
-            Tìm Kiếm
-          </button>
+          <button type="submit" className="home-search-button">Tìm Kiếm</button>
         </form>
+      </div>
+
+      {/* FILTER SECTION */}
+      <div className="home-filter-section">
+        <div className="filter-row">
+          <select 
+            value={selectedCategory} 
+            onChange={(e) => handleFilterChange('category', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Tất cả loại món</option>
+            {filters.categories.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
+
+          <select 
+            value={selectedCuisine} 
+            onChange={(e) => handleFilterChange('cuisine', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Tất cả ẩm thực</option>
+            {filters.cuisines.map(cui => (
+              <option key={cui.value} value={cui.value}>{cui.label}</option>
+            ))}
+          </select>
+
+          {hasActiveFilters && (
+            <button onClick={clearFilters} className="filter-clear-btn">
+              ✕ Xóa bộ lọc
+            </button>
+          )}
+        </div>
+
+        {tags.length > 0 && (
+          <div className="filter-tags">
+            <span className="filter-tags-label">Tags:</span>
+            <div className="filter-tags-list">
+              {visibleTags.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => handleFilterChange('tag', selectedTag === tag.slug ? '' : tag.slug)}
+                  className={`filter-tag ${selectedTag === tag.slug ? 'active' : ''}`}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+              {tags.length > 8 && (
+                <button 
+                  onClick={() => setShowAllTags(!showAllTags)} 
+                  className="filter-tag-toggle"
+                >
+                  {showAllTags ? '← Thu gọn' : `+${tags.length - 8} tags`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {hasActiveFilters && (
+          <p className="filter-result-count">Tìm thấy {total} công thức</p>
+        )}
       </div>
 
       {/* RECIPES SECTION */}
       {recipes.length > 0 ? (
         <>
-          <section className="home-section">
-            <h3 className="section-title">Công Thức Nổi Bật</h3>
-            <div className="recipe-grid-overlay" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-              {recipes.slice(0, 4).map((recipe) => (
-                  <Link
-                    key={recipe.id}
-                    to={`/recipe/${recipe.id}`}
-                    className="recipe-card-overlay"
-                    style={{ display: 'block', position: 'relative', aspectRatio: '1/1', minHeight: '200px', borderRadius: '10px', overflow: 'hidden', background: '#f0f0f0' }}>
-                    <div className="recipe-overlay-img" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                      {recipe.image_url ? (
-                        (recipe.image_url.toLowerCase().includes('.mp4') || 
-                        recipe.image_url.toLowerCase().includes('.webm') ||
-                        recipe.image_url.toLowerCase().includes('.avi') ||
-                        recipe.image_url.toLowerCase().includes('.mov')) ? (
-                          <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {/* Featured section - only show on first page without filters */}
+          {page === 1 && !hasActiveFilters && (
+            <section className="home-section">
+              <h3 className="section-title">🔥 Công Thức Nổi Bật</h3>
+              <div className="recipe-grid-overlay">
+                {recipes.slice(0, 6).map((recipe) => (
+              <div key={recipe.id} className="recipe-card-overlay">
+                    <Link to={`/recipe/${recipe.id}`} className="recipe-card-link">
+                      <div className="recipe-overlay-img">
+                        {recipe.image_url ? (
+                          (recipe.image_url.toLowerCase().includes('.mp4') || 
+                          recipe.image_url.toLowerCase().includes('.webm') ||
+                          recipe.image_url.toLowerCase().includes('.mov')) ? (
+                            <video src={recipe.image_url} />
+                          ) : (
+                            <img src={recipe.image_url} alt={recipe.title} />
+                          )
                         ) : (
-                          <img src={recipe.image_url} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        )
-                      ) : (
-                        <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
-                      )}
-                    </div>
-                    <div className="recipe-overlay-content" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)', padding: '12px', color: 'white' }}>
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{recipe.title}</h4>
-                      <p className="recipe-overlay-author" style={{ margin: '0 0 6px 0', fontSize: '12px' }}>{recipe.username}</p>
-                      <div className="recipe-overlay-meta" style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
+                          <div className="recipe-placeholder" />
+                        )}
+                      </div>
+                    </Link>
+                    <div className="recipe-overlay-content">
+                      <Link to={`/recipe/${recipe.id}`}><h4>{recipe.title}</h4></Link>
+                      <Link to={`/user/${recipe.user_id}`} className="recipe-overlay-author" onClick={(e) => e.stopPropagation()}>
+                        {recipe.username}
+                      </Link>
+                      <div className="recipe-overlay-meta">
                         <span>⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
                         <span>👁️ {recipe.views || 0}</span>
                         <span>❤️ {recipe.favorite_count || 0}</span>
                       </div>
                     </div>
-                  </Link>
-              ))}
-            </div>
-          </section>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-          {/* ALL RECIPES SECTION */}
+          {/* All Recipes Section */}
           <section className="home-section">
-            <h3 className="section-title">Tất Cả Công Thức</h3>
-            <div className="recipe-grid-overlay" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+            <h3 className="section-title">
+              {hasActiveFilters ? '🔍 Kết Quả Lọc' : '📖 Tất Cả Công Thức'}
+            </h3>
+            <div className="recipe-grid-overlay">
               {recipes.map((recipe) => (
-                  <Link
-                    key={recipe.id}
-                    to={`/recipe/${recipe.id}`}
-                    className="recipe-card-overlay"
-                    style={{ display: 'block', position: 'relative', aspectRatio: '1/1', minHeight: '200px', borderRadius: '10px', overflow: 'hidden', background: '#f0f0f0' }}>
-                    <div className="recipe-overlay-img" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+              <div key={recipe.id} className="recipe-card-overlay">
+                  <Link to={`/recipe/${recipe.id}`} className="recipe-card-link">
+                    <div className="recipe-overlay-img">
                       {recipe.image_url ? (
                         (recipe.image_url.toLowerCase().includes('.mp4') || 
                         recipe.image_url.toLowerCase().includes('.webm') ||
-                        recipe.image_url.toLowerCase().includes('.avi') ||
                         recipe.image_url.toLowerCase().includes('.mov')) ? (
-                          <video src={recipe.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <video src={recipe.image_url} />
                         ) : (
-                          <img src={recipe.image_url} alt={recipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={recipe.image_url} alt={recipe.title} />
                         )
                       ) : (
-                        <div style={{ background: '#ddd', width: '100%', height: '100%' }} />
+                        <div className="recipe-placeholder" />
                       )}
                     </div>
-                    <div className="recipe-overlay-content" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%)', padding: '12px', color: 'white' }}>
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{recipe.title}</h4>
-                      <p className="recipe-overlay-author" style={{ margin: '0 0 6px 0', fontSize: '12px' }}>{recipe.username}</p>
-                      <div className="recipe-overlay-meta" style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
-                        <span>⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
-                        <span>👁️ {recipe.views || 0}</span>
-                        <span>❤️ {recipe.favorite_count || 0}</span>
-                      </div>
-                    </div>
                   </Link>
+                  <div className="recipe-overlay-content">
+                    <Link to={`/recipe/${recipe.id}`}><h4>{recipe.title}</h4></Link>
+                    <Link to={`/user/${recipe.user_id}`} className="recipe-overlay-author" onClick={(e) => e.stopPropagation()}>
+                      {recipe.username}
+                    </Link>
+                    <div className="recipe-overlay-meta">
+                      <span>⭐ {recipe.avg_rating ? Number(recipe.avg_rating).toFixed(1) : '—'}</span>
+                      <span>👁️ {recipe.views || 0}</span>
+                      <span>❤️ {recipe.favorite_count || 0}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="pagination-btn"
+                >
+                  ← Trước
+                </button>
+                <span className="pagination-info">
+                  Trang {page} / {totalPages}
+                </span>
+                <button 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="pagination-btn"
+                >
+                  Sau →
+                </button>
+              </div>
+            )}
           </section>
         </>
       ) : (
-        <p className="empty-message">Chưa có công thức nào được đăng!</p>
+        <p className="empty-message">
+          {hasActiveFilters ? 'Không tìm thấy công thức nào phù hợp!' : 'Chưa có công thức nào được đăng!'}
+        </p>
       )}
     </div>
   );

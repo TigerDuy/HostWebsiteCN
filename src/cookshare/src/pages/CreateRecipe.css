@@ -750,3 +750,142 @@
     padding: 16px;
   }
 }
+
+/* ===== CATEGORY & CUISINE SELECTS ===== */
+.form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #ff9800;
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-field {
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+/* ===== TAGS SELECTION ===== */
+.tags-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tag-btn {
+  padding: 6px 14px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-btn:hover {
+  background: #fff5f0;
+  border-color: #ff9800;
+  color: #ff9800;
+}
+
+.tag-btn.selected {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: white;
+}
+
+.add-tag-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-tag-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.add-tag-btn:hover {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: white;
+}
+
+/* ===== ADD BUTTON ===== */
+.add-button {
+  padding: 10px 20px;
+  background: white;
+  border: 1px dashed #bbb;
+  border-radius: 3px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 12px;
+}
+
+.add-button:hover {
+  border-color: #ff9800;
+  color: #ff9800;
+  background: #fffbf0;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.unit-text {
+  font-size: 14px;
+  color: #666;
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .add-tag-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .add-tag-btn {
+    width: 100%;
+  }
+}

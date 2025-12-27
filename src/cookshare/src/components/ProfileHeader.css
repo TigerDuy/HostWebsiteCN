@@ -87,17 +87,27 @@
 
 .ph-counts {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
   font-size: 0.95rem;
 }
 
-.ph-counts span {
+.ph-count-item {
   color: #555;
+}
+
+.ph-count-item.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.ph-count-item.clickable:hover {
+  color: #ff6b6b;
 }
 
 .ph-counts strong {
   color: #ff6b6b;
   font-weight: 600;
+  margin-right: 4px;
 }
 
 .ph-right {
