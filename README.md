@@ -108,14 +108,26 @@ git clone https://github.com/TigerDuy/cn_da22ttd_nguyenthanhduy_110122062_xaydun
 cd cn_da22ttd_nguyenthanhduy_110122062_xaydungwebsitechiasecongthucnauan/src
 ```
 
-### 2. Cài Đặt Backend
+### 2. Cài Đặt Dependencies
 
 ```bash
+# Cài cho thư mục gốc (concurrently)
+npm install
+
+# Cài cho backend
 cd backend
 npm install
+cd ..
+
+# Cài cho frontend
+cd cookshare
+npm install
+cd ..
 ```
 
-**Tạo file `.env`:**
+### 3. Cấu Hình Environment
+
+**Backend `.env` (src/backend/.env):**
 ```
 PORT=3001
 DB_HOST=localhost
@@ -133,31 +145,34 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 ```
 
-**Tạo Database:**
-```bash
-mysql -u root -p < database/database.sql
-```
-
-**Chạy Backend:**
-```bash
-npm start
-# Server chạy tại http://localhost:3001
-```
-
-### 3. Cài Đặt Frontend
-
-```bash
-cd cookshare
-npm install
-```
-
-**Tạo file `.env`:**
+**Frontend `.env` (src/cookshare/.env):**
 ```
 REACT_APP_API_BASE=http://localhost:3001
 ```
 
-**Chạy Frontend:**
+### 4. Tạo Database
+
 ```bash
+mysql -u root -p < database/database.sql
+```
+
+### 5. Chạy Ứng Dụng
+
+**Cách 1: Chạy cả Backend và Frontend cùng lúc (khuyên dùng)**
+```bash
+# Từ thư mục src/
+npm run dev
+```
+
+**Cách 2: Chạy riêng từng phần**
+```bash
+# Terminal 1 - Backend
+cd backend
+npm start
+# Server chạy tại http://localhost:3001
+
+# Terminal 2 - Frontend
+cd cookshare
 npm start
 # App chạy tại http://localhost:3000
 ```
