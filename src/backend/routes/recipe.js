@@ -109,10 +109,12 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
         
         // Add tags if provided
         if (tagIds.length > 0) {
-          const tagValues = tagIds.map(tagId => [recipeId, tagId]);
-          db.query(
-            "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
-            [tagValues],
+          // PostgreSQL bulk insert
+          const placeholders = tagIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
+          const flatValues = tagIds.flatMap(tagId => [recipeId, tagId]);
+          db.pool.query(
+            `INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ${placeholders}`,
+            flatValues,
             (tagErr) => {
               if (tagErr) console.warn("⚠️ Lỗi thêm tags:", tagErr.message);
               // Update usage count
@@ -280,11 +282,12 @@ router.put("/tags/:recipeId", verifyToken, (req, res) => {
         return res.json({ message: "✅ Đã cập nhật tags!" });
       }
 
-      // Insert new tags
-      const values = tagIds.map(tagId => [recipeId, tagId]);
-      db.query(
-        "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
-        [values],
+      // Insert new tags - PostgreSQL bulk insert
+      const placeholders = tagIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
+      const flatValues = tagIds.flatMap(tagId => [recipeId, tagId]);
+      db.pool.query(
+        `INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ${placeholders}`,
+        flatValues,
         (err) => {
           if (err) return res.status(500).json({ message: "❌ Lỗi thêm tags!" });
           
