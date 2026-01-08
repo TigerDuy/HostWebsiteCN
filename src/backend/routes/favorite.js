@@ -47,16 +47,15 @@ router.get("/list", verifyToken, (req, res) => {
             nguoi_dung.avatar_url,
             COALESCE(AVG(danh_gia.rating), 0) as avg_rating,
             COUNT(DISTINCT danh_gia.id) as rating_count,
-            COUNT(DISTINCT fav.id) as favorite_count,
-            MAX(favorite.id) as fav_order
+            COUNT(DISTINCT fav.id) as favorite_count
      FROM cong_thuc 
      JOIN favorite ON cong_thuc.id = favorite.recipe_id
      JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
      LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
      LEFT JOIN favorite fav ON cong_thuc.id = fav.recipe_id
      WHERE favorite.user_id = ? 
-     GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
-     ORDER BY fav_order DESC`,
+     GROUP BY cong_thuc.id
+     ORDER BY favorite.id DESC`,
     [userId],
     (err, result) => {
       if (err) {

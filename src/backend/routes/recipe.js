@@ -109,12 +109,10 @@ router.post("/create", verifyToken, upload.single("image"), async (req, res) => 
         
         // Add tags if provided
         if (tagIds.length > 0) {
-          // PostgreSQL bulk insert
-          const placeholders = tagIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
-          const flatValues = tagIds.flatMap(tagId => [recipeId, tagId]);
-          db.pool.query(
-            `INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ${placeholders}`,
-            flatValues,
+          const tagValues = tagIds.map(tagId => [recipeId, tagId]);
+          db.query(
+            "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
+            [tagValues],
             (tagErr) => {
               if (tagErr) console.warn("⚠️ Lỗi thêm tags:", tagErr.message);
               // Update usage count
@@ -192,7 +190,7 @@ router.get("/list", (req, res) => {
         LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
         LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
         ${whereClause}
-        GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
+        GROUP BY cong_thuc.id
         ORDER BY rating_count DESC, avg_rating DESC, cong_thuc.created_at DESC
         LIMIT ? OFFSET ?
       `, [...params, limit, offset], (err, result) => {
@@ -282,12 +280,11 @@ router.put("/tags/:recipeId", verifyToken, (req, res) => {
         return res.json({ message: "✅ Đã cập nhật tags!" });
       }
 
-      // Insert new tags - PostgreSQL bulk insert
-      const placeholders = tagIds.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
-      const flatValues = tagIds.flatMap(tagId => [recipeId, tagId]);
-      db.pool.query(
-        `INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ${placeholders}`,
-        flatValues,
+      // Insert new tags
+      const values = tagIds.map(tagId => [recipeId, tagId]);
+      db.query(
+        "INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ?",
+        [values],
         (err) => {
           if (err) return res.status(500).json({ message: "❌ Lỗi thêm tags!" });
           
@@ -348,7 +345,7 @@ router.get("/search", (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.title LIKE ? AND cong_thuc.is_hidden = FALSE
-    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
+    GROUP BY cong_thuc.id
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
   `, [`%${q}%`], (err, result) => {
     if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
@@ -373,7 +370,7 @@ router.get("/detail/:id", (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.id = ?
-    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
+    GROUP BY cong_thuc.id
   `, [recipeId], (err, result) => {
     if (err || result.length === 0)
       return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
@@ -605,7 +602,7 @@ router.get("/my", verifyToken, (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.user_id = ?
-    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
+    GROUP BY cong_thuc.id
     ORDER BY cong_thuc.created_at DESC
   `, [user_id], (err, result) => {
     if (err)
@@ -642,7 +639,7 @@ router.get("/author/:userId", (req, res) => {
         LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
         LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
         WHERE cong_thuc.user_id = ?
-        GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
+        GROUP BY cong_thuc.id
         ORDER BY cong_thuc.created_at DESC 
         LIMIT ? OFFSET ?
       `, [userId, limit, offset], (err, result) => {
