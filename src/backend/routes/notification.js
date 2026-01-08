@@ -224,8 +224,8 @@ router.post("/:id/reply", verifyToken, upload.single("image"), (req, res) => {
           }
 
           db.query(
-            "UPDATE notifications SET metadata = JSON_SET(COALESCE(metadata, '{}'), '$.has_reply', true, '$.reply_id', ?) WHERE id = ?",
-            [result.insertId, notificationId],
+            "UPDATE notifications SET metadata = COALESCE(metadata, '{}')::jsonb || ?::jsonb WHERE id = ?",
+            [JSON.stringify({ has_reply: true, reply_id: result.insertId }), notificationId],
             (err3) => {
               if (err3) console.error("⚠️ Lỗi đánh dấu đã phản hồi:", err3);
               return res.json({ message: "✅ Đã gửi phản hồi", id: result.insertId });
@@ -245,7 +245,7 @@ router.get("/report/:reportId/status", verifyAdminOrModerator(db), (req, res) =>
     `SELECT n.id, n.metadata, n.created_at, n.image_url
      FROM notifications n
      WHERE n.type = 'report_warning'
-       AND JSON_EXTRACT(n.metadata, '$.report_id') = ?
+       AND (n.metadata->>'report_id')::int = ?
      ORDER BY n.created_at DESC
      LIMIT 1`,
     [reportId],
@@ -262,7 +262,7 @@ router.get("/report/:reportId/status", verifyAdminOrModerator(db), (req, res) =>
       const warning = rows[0];
       let meta = {};
       try {
-        meta = warning.metadata ? JSON.parse(warning.metadata) : {};
+        meta = typeof warning.metadata === 'string' ? JSON.parse(warning.metadata) : (warning.metadata || {});
       } catch (e) {
         meta = {};
       }
@@ -282,7 +282,7 @@ router.get("/report/:reportId/status", verifyAdminOrModerator(db), (req, res) =>
         `SELECT r.id, r.message, r.created_at, r.sender_role, r.image_url, u.username as sender_name
          FROM notifications r
          JOIN nguoi_dung u ON r.sender_id = u.id
-         WHERE JSON_EXTRACT(r.metadata, '$.reply_to') = ?
+         WHERE (r.metadata->>'reply_to')::int = ?
          ORDER BY r.created_at DESC
          LIMIT 1`,
         [warning.id],
