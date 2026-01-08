@@ -190,7 +190,7 @@ router.get("/list", (req, res) => {
         LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
         LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
         ${whereClause}
-        GROUP BY cong_thuc.id
+        GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
         ORDER BY rating_count DESC, avg_rating DESC, cong_thuc.created_at DESC
         LIMIT ? OFFSET ?
       `, [...params, limit, offset], (err, result) => {
@@ -345,7 +345,7 @@ router.get("/search", (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.title LIKE ? AND cong_thuc.is_hidden = FALSE
-    GROUP BY cong_thuc.id
+    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
     ORDER BY avg_rating DESC, cong_thuc.created_at DESC
   `, [`%${q}%`], (err, result) => {
     if (err) return res.status(500).json({ message: "❌ Lỗi tìm kiếm!" });
@@ -370,7 +370,7 @@ router.get("/detail/:id", (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.id = ?
-    GROUP BY cong_thuc.id
+    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
   `, [recipeId], (err, result) => {
     if (err || result.length === 0)
       return res.status(404).json({ message: "❌ Không tìm thấy công thức!" });
@@ -602,7 +602,7 @@ router.get("/my", verifyToken, (req, res) => {
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
     WHERE cong_thuc.user_id = ?
-    GROUP BY cong_thuc.id
+    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
     ORDER BY cong_thuc.created_at DESC
   `, [user_id], (err, result) => {
     if (err)
@@ -639,7 +639,7 @@ router.get("/author/:userId", (req, res) => {
         LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
         LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
         WHERE cong_thuc.user_id = ?
-        GROUP BY cong_thuc.id
+        GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
         ORDER BY cong_thuc.created_at DESC 
         LIMIT ? OFFSET ?
       `, [userId, limit, offset], (err, result) => {
