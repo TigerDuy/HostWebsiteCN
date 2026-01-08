@@ -232,7 +232,7 @@ router.post("/tags", verifyToken, (req, res) => {
     .replace(/^-|-$/g, "");
 
   db.query(
-    "INSERT INTO tags (name, slug) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id",
+    "INSERT INTO tags (name, slug) VALUES (?, ?) ON CONFLICT (slug) DO NOTHING",
     [name.trim(), slug],
     (err, result) => {
       if (err) return res.status(500).json({ message: "❌ Lỗi tạo tag!" });
