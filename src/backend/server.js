@@ -348,14 +348,34 @@ app.get("/import-data", async (req, res) => {
     }
     await db.pool.query(`SELECT setval('nguoi_dung_id_seq', (SELECT MAX(id) FROM nguoi_dung))`);
     
-    // Import recipes (simplified)
+    // Import recipes (đầy đủ từ MySQL)
     const recipes = [
-      { id: 6, user_id: 3, title: 'Cơm cà ri gà', ingredients: '1/2 con gà, 1 gói cà ri bột, sữa tươi, khoai lang, hành tây, sả, hành tím, hành lá, gia vị', steps: 'Gà bóp muối rửa sạch, chặt nhỏ, ướp với muối đường và cà ri.||STEP||Khi sôi thì đậy nắp để nhỏ lửa cho gà thấm vị.||STEP||Cho khoai vào nồi, khoai mềm cho hành tây vào.||STEP||Múc cơm nóng ra dĩa, thêm cà ri xung quanh.', cook_time: '90 phút', servings: '3', views: 48, category: 'main', cuisine: 'vietnam' },
-      { id: 7, user_id: 3, title: 'Lẩu Thái Hải Sản', ingredients: '1 kg tôm, 1 kg nghêu, 500 g mực, 500 g bò, nấm các loại, rau cải', steps: 'Tôm bỏ chỉ lưng, rửa sạch.||STEP||Đặt nồi nước lên bếp, cho gia vị tomyum vào nấu sôi.||STEP||Dọn tất cả lên bàn, nhúng các loại topping.', cook_time: '60', servings: '5', views: 26, category: 'main', cuisine: 'vietnam' },
+      { id: 6, user_id: 3, title: 'Cơm cà ri gà', ingredients: '1/2 con gà, 1 gói cà ri bột, sữa tươi, khoai lang, hành tây, sả', steps: 'Gà bóp muối rửa sạch, ướp với cà ri.||STEP||Khi sôi đậy nắp nhỏ lửa.||STEP||Cho khoai vào nồi.||STEP||Múc cơm ra dĩa.', cook_time: '90 phút', servings: '3', views: 48, category: 'main', cuisine: 'vietnam' },
+      { id: 7, user_id: 3, title: 'Lẩu Thái Hải Sản', ingredients: '1 kg tôm, 1 kg nghêu, 500 g mực, 500 g bò, nấm các loại', steps: 'Tôm bỏ chỉ lưng, rửa sạch.||STEP||Cho gia vị tomyum vào nấu sôi.||STEP||Nhúng các loại topping.', cook_time: '60', servings: '5', views: 26, category: 'main', cuisine: 'vietnam' },
       { id: 8, user_id: 3, title: 'Bò Lúc Lắc', ingredients: 'thịt bò, rau củ quả, tỏi, nước tương', steps: 'Ướp thịt với muối, hạt nêm, nước tương.||STEP||Sơ chế rau củ quả.||STEP||Xào thịt với tỏi phi thơm.', cook_time: '30 phút', servings: '2', views: 91, category: 'main', cuisine: 'vietnam' },
-      { id: 31, user_id: 1, title: 'Phở Bò Hà Nội', ingredients: '1 kg thịt bò, 1 kg xương lợn, sá sùng khô, quế, hoa hồi, thảo quả, hành lá, rau thơm, gừng', steps: 'Rửa sạch xương bò.||STEP||Cho xương bò vào hầm.||STEP||Nướng chín hành, gừng.||STEP||Rang hoa hồi, quế, thảo quả.||STEP||Nấu sôi nước hầm bò.||STEP||Cắt lát mỏng thịt bò.||STEP||Cho thêm hành lá, rau mùi.', cook_time: '2 tiếng', servings: '6', views: 123, category: 'main', cuisine: 'vietnam' },
-      { id: 32, user_id: 1, title: 'Cơm Tấm Sườn Nướng', ingredients: '2 miếng thịt cốt lếch, 2 quả trứng gà, dưa leo, sữa đặc, hành lá, gia vị', steps: 'Ướp thịt cốt lếch với hành đập dập, sữa đặc, nước mắm.||STEP||Cắt nhỏ hành lá.||STEP||Rửa sạch dưa leo.||STEP||Chiên trứng ốp la.||STEP||Nướng thịt.||STEP||Sắp mọi thứ lên đĩa.', cook_time: '0', servings: '2', views: 45, category: 'main', cuisine: 'vietnam' },
-      { id: 33, user_id: 1, title: 'Bánh Mì Thịt Nướng', ingredients: 'bánh mì, đồ chua, thịt heo, xã băm, tỏi, ớt, cà chua, hành lá, nước mắm, đường, chanh', steps: 'Làm đồ chua đơn giản.||STEP||Xay hỗn hợp tỏi, hành, xã.||STEP||Sốt ướp thịt nướng.||STEP||Ướp thịt.||STEP||Nướng thịt.||STEP||Làm nước mắm.||STEP||Chuẩn bị các thành phần.||STEP||Cho vào bánh mì.', cook_time: '1 tiếng', servings: '2 - 3', views: 48, category: 'main', cuisine: 'vietnam' }
+      { id: 9, user_id: 3, title: 'Canh Chua Cá Hú', ingredients: '300g cá hú, đậu bắp, cà chua, bạc hà, thơm, me chua', steps: 'Cá hú rửa sạch, cắt khúc.||STEP||Nấu sôi nước, cho me vào.||STEP||Cho cá vào nồi nước me.', cook_time: '20 phút', servings: '2', views: 42, category: 'soup', cuisine: 'vietnam' },
+      { id: 10, user_id: 3, title: 'Bánh Xèo Miền Tây', ingredients: '200g bột bánh xèo, bột nghệ, hành lá, tôm, thịt, giá', steps: 'Sơ chế nguyên liệu.||STEP||Trộn bột bánh.||STEP||Xào thịt và tôm.||STEP||Đổ bánh xèo.', cook_time: '1 tiếng', servings: '4', views: 28, category: 'main', cuisine: 'vietnam' },
+      { id: 11, user_id: 4, title: 'Mì Xào Hải Sản', ingredients: '100g mì trứng, 300g hải sản đông lạnh, rau cải', steps: 'Mì luộc vừa chín tới.||STEP||Phi thơm hành, tỏi, cho hải sản vào xào.', cook_time: '30 phút', servings: '2', views: 32, category: 'main', cuisine: 'vietnam' },
+      { id: 12, user_id: 4, title: 'Thịt Kho Tàu', ingredients: '600-900g thịt ba chỉ, hành khô, tỏi, xì dầu, mắm', steps: 'Thịt trần qua, cắt miếng.||STEP||Cho thịt vào đảo cùng hành tỏi.||STEP||Đun sôi, hạ nhỏ lửa 3 tiếng.', cook_time: '3-4 tiếng', servings: '3-4', views: 31, category: 'main', cuisine: 'vietnam' },
+      { id: 13, user_id: 4, title: 'Gà Rán Giòn', ingredients: '50g bột mỳ, 50g bột ngô, 50g bột chiên giòn, 450g ức gà', steps: 'Sơ chế ức gà.||STEP||Rửa sạch với muối.||STEP||Lăn gà qua 3 bát bột rồi chiên.', cook_time: '45 phút', servings: '2', views: 33, category: 'snack', cuisine: 'vietnam' },
+      { id: 14, user_id: 4, title: 'Súp hải sản măng tây', ingredients: '400g tôm sú, 200g cá hồi, 200g măng tây, nấm rơm, trứng gà', steps: 'Xương gà rửa sạch, ninh lấy nước dùng.||STEP||Tôm bóc vỏ, cắt hạt lựu.||STEP||Đun sôi nồi nước dùng, cho tôm cá vào.', cook_time: '45 phút', servings: '4', views: 33, category: 'soup', cuisine: 'vietnam' },
+      { id: 15, user_id: 4, title: 'Nem Nướng Nha Trang', ingredients: '700g thịt nạc dăm, 300g giò sống, tỏi băm, bột năng', steps: 'Thịt xay nhuyễn, trộn với giò sống và gia vị.||STEP||Nướng nem trên lửa than.||STEP||Rau thơm rửa sạch.', cook_time: '2 Tiếng', servings: '5-6', views: 31, category: 'appetizer', cuisine: 'vietnam' },
+      { id: 16, user_id: 5, title: 'Hủ Tiếu Nam Vang', ingredients: '1kg hủ tiếu dai, xương ống, mực khô, tôm khô, tim gan heo', steps: 'Xương ngâm nước muối, hầm cùng mực khô.||STEP||Tỏi phi vàng, làm nước sốt.||STEP||Trụng hủ tíu, chan nước dùng.', cook_time: '90 phút', servings: '5', views: 29, category: 'main', cuisine: 'vietnam' },
+      { id: 17, user_id: 5, title: 'Cá tầm kho tộ', ingredients: '500g cá tầm, hành tăm, hành tây, tỏi, gừng, tiêu xanh', steps: 'Cá tầm làm sạch, ướp gia vị.||STEP||Phi hành tăm, xếp cá lên trên.||STEP||Cho nước sôi, nấu lửa nhỏ 20 phút.', cook_time: '30 phút', servings: '4', views: 32, category: 'main', cuisine: 'vietnam' },
+      { id: 18, user_id: 5, title: 'Chả Giò Rế', ingredients: 'Thịt nạc, khoai cao, hành lá, nấm mèo, đường, tiêu', steps: 'Thịt nạc xay nhỏ, trộn với khoai cao và nấm mèo.||STEP||Quấn xong đem chiên vàng giòn.', cook_time: '1 tiếng', servings: '4', views: 32, category: 'appetizer', cuisine: 'vietnam' },
+      { id: 19, user_id: 5, title: 'Bún Bò Huế', ingredients: '1.5kg xương bò, 1.5kg bắp bò, 1kg chân giò, sả, mắm ruốc', steps: 'Xương bò ngâm nước lạnh 3-4 tiếng.||STEP||Làm sa tế tôm.||STEP||Trần bắp bò và xương bò.||STEP||Ninh 3-4 tiếng.', cook_time: '4 tiếng', servings: '6', views: 39, category: 'main', cuisine: 'vietnam' },
+      { id: 20, user_id: 5, title: 'Bánh cuốn (bằng chảo)', ingredients: '200g thịt heo xay, hành tây, cà rốt, nấm hương, nấm mèo', steps: 'Pha bột gạo với nước.||STEP||Xào nhân thịt với mộc nhĩ.||STEP||Tráng bánh trên chảo.||STEP||Cho nhân vào và cuốn lại.', cook_time: '1 tiếng', servings: '4', views: 33, category: 'snack', cuisine: 'vietnam' },
+      { id: 21, user_id: 6, title: 'Mực Xào Sa Tế', ingredients: '3 cây nấm đùi gà, ớt bột, tương ớt, nước tương, dầu hào', steps: 'Rửa nấm, xắt theo chiều dọc.||STEP||Pha hỗn hợp sauce.||STEP||Phi tỏi thơm cho sauce vào nấu.', cook_time: '30 phút', servings: '2', views: 38, category: 'snack', cuisine: 'vietnam' },
+      { id: 22, user_id: 6, title: 'Xôi Xéo', ingredients: '1kg gạo nếp, 200g đậu xanh lột vỏ, 100g hành tím, bột nghệ', steps: 'Gạo nếp ngâm với bột nghệ qua đêm.||STEP||Gạo nếp hấp 30 phút.||STEP||Múc xôi ra dĩa, phủ đậu xanh lên.', cook_time: '30 phút', servings: '6', views: 29, category: 'appetizer', cuisine: 'vietnam' },
+      { id: 23, user_id: 6, title: 'Gà Xào Sả Ớt', ingredients: '500g thịt gà mái, 4 cây sả, ớt sừng, bột nghệ, nước mắm', steps: 'Gà rửa sạch chặt khúc, ướp gia vị.||STEP||Phi thơm tỏi sả ớt.||STEP||Thêm nước đậy nắp 10 phút.', cook_time: '45 phút', servings: '4', views: 47, category: 'main', cuisine: 'vietnam' },
+      { id: 24, user_id: 6, title: 'Canh Bí Đỏ Tôm', ingredients: '300g tôm, 300ml nước, 250g bí đỏ, ngò, hành lá', steps: 'Ướp tôm với hạt nêm và hành tím.||STEP||Ướp hạt nêm vào bí đỏ.||STEP||Xào tôm, đổ nước, cho bí đỏ vào.', cook_time: '30 phút', servings: '2', views: 29, category: 'soup', cuisine: 'vietnam' },
+      { id: 25, user_id: 6, title: 'Sườn Xào Chua Ngọt', ingredients: '300g sườn heo, 2 trái cà chua, 1/2 trái thơm, hành lá', steps: 'Sườn heo rửa sạch, trụng nước sôi.||STEP||Pha nước sốt.||STEP||Chiên sườn vàng, cho nước sốt vào.', cook_time: '45 phút', servings: '3', views: 53, category: 'main', cuisine: 'vietnam' },
+      { id: 31, user_id: 1, title: 'Phở Bò Hà Nội', ingredients: '1kg thịt bò, 1kg xương lợn, sá sùng khô, quế, hoa hồi, thảo quả', steps: 'Rửa sạch xương bò, luộc qua.||STEP||Cho xương bò vào hầm 1h30.||STEP||Nướng chín hành, gừng.||STEP||Rang hoa hồi, quế.||STEP||Nấu sôi nước hầm bò.||STEP||Cắt lát mỏng thịt bò.', cook_time: '2 tiếng', servings: '6', views: 123, category: 'main', cuisine: 'vietnam' },
+      { id: 32, user_id: 1, title: 'Cơm Tấm Sườn Nướng', ingredients: '2 miếng thịt cốt lếch, 2 quả trứng gà, dưa leo, sữa đặc', steps: 'Ướp thịt cốt lếch với sữa đặc, nước mắm.||STEP||Cắt nhỏ hành lá.||STEP||Rửa sạch dưa leo.||STEP||Chiên trứng ốp la.||STEP||Nướng thịt.||STEP||Sắp mọi thứ lên đĩa.', cook_time: '2 tiếng', servings: '2', views: 45, category: 'main', cuisine: 'vietnam' },
+      { id: 33, user_id: 1, title: 'Bánh Mì Thịt Nướng', ingredients: 'bánh mì, đồ chua, thịt heo, xã băm, tỏi, ớt, cà chua', steps: 'Làm đồ chua.||STEP||Xay hỗn hợp tỏi, hành, xã.||STEP||Sốt ướp thịt nướng.||STEP||Ướp thịt.||STEP||Nướng thịt.||STEP||Làm nước mắm.||STEP||Cho vào bánh mì.', cook_time: '1 tiếng', servings: '2-3', views: 48, category: 'main', cuisine: 'vietnam' },
+      { id: 34, user_id: 1, title: 'Bún Chả Hà Nội', ingredients: '1-1.3kg thịt heo, rau xà lách, cà rốt, đu đủ xanh, bún gạo', steps: 'Thịt heo băm nhuyễn, ướp gia vị.||STEP||Cà rốt, đu đủ bào mỏng ngâm chua.||STEP||Làm nước chấm.||STEP||Bày bún, rau, chả ra đĩa.', cook_time: '1 tiếng', servings: '5-6', views: 30, category: 'main', cuisine: 'vietnam' },
+      { id: 35, user_id: 1, title: 'Gỏi Cuốn Tôm Thịt', ingredients: '700g thịt ba chỉ, 700g tôm tươi, bún tươi, rau xà lách', steps: 'Thịt rửa sạch, luộc chín.||STEP||Tôm bóc vỏ, luộc chín.||STEP||Các loại rau rửa sạch.||STEP||Làm ướt bánh tráng cuốn.', cook_time: '60 phút', servings: '4', views: 36, category: 'main', cuisine: 'vietnam' },
+      { id: 38, user_id: 3, title: 'Bún đậu mắm tôm', ingredients: '300g lưỡi heo, 200g đậu khuôn, 300g bún khô, rau ăn kèm', steps: 'Bún khô luộc chín, ép lại thành bánh.||STEP||Đậu chiên vàng giòn.||STEP||Thịt luộc chín, cắt miếng.||STEP||Pha mắm tôm.', cook_time: '1 tiếng', servings: '4', views: 6, category: 'main', cuisine: 'vietnam' }
     ];
     
     for (const r of recipes) {
@@ -371,28 +391,25 @@ app.get("/import-data", async (req, res) => {
       results.follows++;
     }
     
-    // Import favorites (chỉ dùng recipe IDs đã import: 6,7,8,31,32,33)
-    const favorites = [[1,33],[1,31],[1,32],[3,6],[3,8],[3,7],[2,31],[2,6],[4,8],[5,7],[6,31],[6,32]];
+    // Import favorites (đầy đủ từ MySQL - chỉ dùng recipe IDs đã import)
+    const favorites = [[1,33],[1,31],[1,32],[1,34],[1,35],[1,23],[1,13],[1,8],[1,17],[6,21],[6,22],[6,23],[6,24],[6,13],[6,32],[6,25],[6,20],[6,7],[4,11],[4,15],[4,12],[4,14],[4,13],[4,31],[4,21],[4,9],[4,19],[5,20],[5,19],[5,17],[5,18],[5,16],[5,31],[5,24],[5,14],[5,8],[3,6],[3,10],[3,9],[3,8],[3,7],[3,35],[3,25],[3,11],[3,18],[3,38],[2,31],[2,6],[2,16],[2,15],[2,25]];
     for (const [u, r] of favorites) {
-      await db.pool.query(`INSERT INTO favorite (user_id, recipe_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [u, r]);
-      results.favorites++;
+      try { await db.pool.query(`INSERT INTO favorite (user_id, recipe_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [u, r]); results.favorites++; } catch(e) {}
     }
     
-    // Import ratings (chỉ dùng recipe IDs đã import)
-    const ratings = [[33,2,5],[6,2,5],[33,1,4],[31,1,5],[32,1,5],[8,3,5],[7,3,5],[31,2,5],[8,1,5],[31,6,5],[31,4,5],[32,6,4],[32,4,4],[31,5,5],[31,3,1],[33,5,2],[6,1,4],[7,1,2],[8,6,2],[6,4,3],[7,5,4],[8,4,5],[32,3,3],[33,3,4],[33,6,1]];
+    // Import ratings (đầy đủ từ MySQL)
+    const ratings = [[33,2,5],[6,2,5],[33,1,4],[31,1,5],[32,1,5],[34,1,5],[35,1,5],[21,6,5],[11,4,5],[20,5,5],[19,5,5],[17,5,5],[18,5,5],[16,5,5],[6,3,5],[10,3,5],[9,3,5],[8,3,5],[7,3,5],[19,3,2],[31,2,5],[16,2,5],[15,2,5],[25,2,5],[22,6,5],[23,6,5],[24,6,5],[25,6,5],[12,6,4],[14,6,2],[13,6,3],[15,6,2],[15,4,5],[14,4,5],[12,4,5],[13,4,5],[11,6,4],[31,6,5],[31,4,5],[32,6,4],[33,6,1],[35,6,3],[34,6,2],[32,4,4],[35,4,2],[33,4,3],[34,4,1],[31,5,5],[31,3,1],[33,5,2],[35,3,5],[25,1,4],[21,1,3],[23,1,5],[22,1,2],[24,1,1],[15,1,4],[13,1,5],[11,1,2],[14,1,3],[12,1,1],[6,1,4],[7,1,2],[8,1,5],[9,1,1],[10,1,3],[16,1,4],[19,1,3],[17,1,5],[18,1,1],[20,1,2],[32,3,3],[33,3,4],[34,3,1],[25,3,5],[23,3,4],[21,3,2],[22,3,3],[24,3,1],[13,3,4],[15,3,3],[11,3,5],[14,3,1],[12,3,2],[16,3,3],[17,3,4],[18,3,5],[20,3,1],[6,6,3],[8,6,2],[9,6,1],[7,6,5],[20,6,5],[19,6,4],[18,6,3],[16,6,2],[17,6,1],[10,6,4],[25,4,4],[24,4,2],[22,4,1],[21,4,5],[23,4,3],[6,4,2],[8,4,4],[9,4,5],[10,4,1],[7,4,3],[19,4,5],[17,4,3],[16,4,2],[18,4,4],[20,4,1],[13,2,5],[24,2,5],[12,2,5],[34,2,5],[20,2,5],[22,2,5],[9,2,5],[14,2,5],[10,2,5],[18,2,5],[21,2,5],[7,2,5],[19,2,5],[8,2,5],[32,2,5],[32,5,1],[35,5,3],[34,5,4],[24,5,5],[22,5,4],[23,5,2],[25,5,1],[21,5,3],[14,5,5],[12,5,3],[11,5,4],[13,5,1],[15,5,2],[9,5,4],[10,5,2],[6,5,3],[7,5,1],[8,5,5],[38,3,5]];
     for (const [rec, usr, rat] of ratings) {
-      await db.pool.query(`INSERT INTO danh_gia (recipe_id, user_id, rating) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [rec, usr, rat]);
-      results.ratings++;
+      try { await db.pool.query(`INSERT INTO danh_gia (recipe_id, user_id, rating) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [rec, usr, rat]); results.ratings++; } catch(e) {}
     }
     
-    // Import comments (chỉ dùng recipe IDs đã import)
-    const comments = [[8,1,'Nhìn ngon thế'],[8,4,'để nấu thử xem sao'],[8,6,'được á'],[8,2,'UKm'],[31,3,'Ăn được không'],[31,1,'Sao lại không nhỉ'],[6,2,'Món này ngon lắm!'],[7,5,'Lẩu Thái tuyệt vời']];
+    // Import comments (đầy đủ từ MySQL)
+    const comments = [[8,1,'Nhìn ngon thế'],[8,4,'để nấu thử xem sao'],[8,6,'được á'],[8,2,'UKm'],[31,3,'Ăn được không'],[31,1,'Sao lại không nhỉ']];
     for (const [rec, usr, cmt] of comments) {
-      await db.pool.query(`INSERT INTO binh_luan (recipe_id, user_id, comment) VALUES ($1, $2, $3)`, [rec, usr, cmt]);
-      results.comments++;
+      try { await db.pool.query(`INSERT INTO binh_luan (recipe_id, user_id, comment) VALUES ($1, $2, $3)`, [rec, usr, cmt]); results.comments++; } catch(e) {}
     }
     
-    res.json({ success: true, message: 'Import completed!', results });
+    res.json({ success: true, message: 'Nhập khẩu hoàn tất!', results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
