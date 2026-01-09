@@ -323,12 +323,24 @@ app.get("/import-data", async (req, res) => {
     const results = { users: 0, recipes: 0, follows: 0, favorites: 0, ratings: 0, comments: 0 };
     
     // Xóa data cũ trước (theo thứ tự FK)
+    await db.pool.query(`DELETE FROM step_images`);
+    await db.pool.query(`DELETE FROM recipe_views`);
+    await db.pool.query(`DELETE FROM notifications`);
+    await db.pool.query(`DELETE FROM admin_hidden_recipes`);
+    await db.pool.query(`DELETE FROM user_report_quota`);
+    await db.pool.query(`DELETE FROM bao_cao`);
+    await db.pool.query(`DELETE FROM user_broadcast_read`);
+    await db.pool.query(`DELETE FROM broadcast_notifications`);
+    await db.pool.query(`DELETE FROM user_theme_preferences`);
+    await db.pool.query(`DELETE FROM recipe_tags`);
+    await db.pool.query(`DELETE FROM tags`);
+    await db.pool.query(`DELETE FROM comment_likes`);
     await db.pool.query(`DELETE FROM binh_luan`);
     await db.pool.query(`DELETE FROM danh_gia`);
     await db.pool.query(`DELETE FROM favorite`);
     await db.pool.query(`DELETE FROM follows`);
     await db.pool.query(`DELETE FROM cong_thuc`);
-    await db.pool.query(`DELETE FROM nguoi_dung`);
+    await db.pool.query(`DELETE FROM nguoi_dung WHERE email != 'admin@cookshare.com'`);
     
     // Data từ MySQL
     const users = [
@@ -469,7 +481,49 @@ app.get("/import-data", async (req, res) => {
     } catch(e) {}
     await db.pool.query(`SELECT setval('user_theme_preferences_id_seq', (SELECT COALESCE(MAX(id), 1) FROM user_theme_preferences))`);
     
-    res.json({ success: true, message: 'Import hoàn tất! Tất cả dữ liệu đã sẵn sàng cho demo.', results });
+    // Import notifications (bỏ image_url vì là localhost)
+    const notifications = [
+      [1, 2, 5, 'admin', 'report_warning', 'Bạn nhận được một cảnh báo về bài viết "Bún Bò Huế"'],
+      [2, 5, 2, 'user', 'reply', 'Test'],
+      [3, 5, 2, 'user', 'reply', 'test'],
+      [4, 2, 1, 'admin', 'report_warning', 'Bạn nhận được một cảnh báo về bài viết "Bánh Mì Thịt Nướng"'],
+      [5, 1, 2, 'moderator', 'reply', 'test'],
+      [6, 5, 2, 'user', 'reply', 'Test'],
+      [7, 3, 4, 'moderator', 'report_warning', 'Bạn nhận được một cảnh báo về bài viết "Mì Xào Hải Sản"']
+    ];
+    for (const [id, sender, receiver, role, type, msg] of notifications) {
+      try { 
+        await db.pool.query(`INSERT INTO notifications (id, sender_id, receiver_id, sender_role, type, message) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`, [id, sender, receiver, role, type, msg]); 
+        results.notifications = (results.notifications || 0) + 1; 
+      } catch(e) {}
+    }
+    await db.pool.query(`SELECT setval('notifications_id_seq', (SELECT COALESCE(MAX(id), 1) FROM notifications))`);
+    
+    // Import admin_hidden_recipes
+    try {
+      await db.pool.query(`INSERT INTO admin_hidden_recipes (id, recipe_id, hidden_by, reason) VALUES (1, 25, 2, 'Test') ON CONFLICT DO NOTHING`);
+      results.hiddenRecipes = 1;
+    } catch(e) {}
+    await db.pool.query(`SELECT setval('admin_hidden_recipes_id_seq', (SELECT COALESCE(MAX(id), 1) FROM admin_hidden_recipes))`);
+    
+    // step_images: KHÔNG import vì ảnh localhost không tồn tại trên Render
+    // Bạn có thể upload ảnh mới cho từng bước trên web sau
+    results.stepImages = 0;
+    
+    // Import recipe_views (sample data)
+    const recipeViews = [
+      [24,'::1'],[19,'::1'],[8,'::1'],[31,'::1'],[32,'::1'],[33,'::1'],[34,'::1'],[35,'::1'],
+      [6,'::1'],[7,'::1'],[9,'::1'],[10,'::1'],[11,'::1'],[12,'::1'],[13,'::1'],[14,'::1'],
+      [15,'::1'],[16,'::1'],[17,'::1'],[18,'::1'],[20,'::1'],[21,'::1'],[22,'::1'],[23,'::1'],[25,'::1'],[38,'::1']
+    ];
+    for (const [recId, ip] of recipeViews) {
+      try { 
+        await db.pool.query(`INSERT INTO recipe_views (recipe_id, client_ip) VALUES ($1, $2)`, [recId, ip]); 
+        results.recipeViews = (results.recipeViews || 0) + 1; 
+      } catch(e) {}
+    }
+    
+    res.json({ success: true, message: 'Import FULL hoàn tất! Tất cả dữ liệu đã sẵn sàng cho demo.', results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
