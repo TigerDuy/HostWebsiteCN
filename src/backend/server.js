@@ -312,6 +312,84 @@ app.use("/report", reportRoutes);
 const notificationRoutes = require("./routes/notification");
 app.use("/notification", notificationRoutes);
 
+// ✅ API Import Data (chỉ dùng 1 lần để migrate từ MySQL)
+app.get("/import-data", async (req, res) => {
+  const SECRET_KEY = "cookshare2026";
+  if (req.query.key !== SECRET_KEY) {
+    return res.status(403).json({ error: "Invalid key" });
+  }
+  
+  try {
+    const results = { users: 0, recipes: 0, follows: 0, favorites: 0, ratings: 0, comments: 0 };
+    
+    // Data từ MySQL
+    const users = [
+      { id: 1, username: 'Thanh Duy', email: 'TigerDuy2000@gmail.com', password: '$2b$10$ho56zHRrYaan5avYuzbyo.fQYDw09w0QABK/uWwku4o4ri3dw/JMq', role: 'moderator', bio: 'PiscesKing' },
+      { id: 2, username: 'Admin', email: 'admin@gmail.com', password: '$2b$10$k55Zu8g8VWfnnab5klAsNeLqmHk8obZ.tCLES6nKE/WqANXpp9gz2', role: 'admin', bio: null },
+      { id: 3, username: 'Phú Đức', email: 'PhuDuc@gmail.com', password: '$2b$10$k55Zu8g8VWfnnab5klAsNeLqmHk8obZ.tCLES6nKE/WqANXpp9gz2', role: 'moderator', bio: null },
+      { id: 4, username: 'Gia Lộc', email: 'HaGiaLoc@gmail.com', password: '$2b$10$k55Zu8g8VWfnnab5klAsNeLqmHk8obZ.tCLES6nKE/WqANXpp9gz2', role: 'user', bio: null },
+      { id: 5, username: 'Khải', email: 'PhanDinhKhai@gmail.com', password: '$2b$10$k55Zu8g8VWfnnab5klAsNeLqmHk8obZ.tCLES6nKE/WqANXpp9gz2', role: 'user', bio: null },
+      { id: 6, username: 'Hoàng Lăm', email: 'HLam@gmail.com', password: '$2b$10$k55Zu8g8VWfnnab5klAsNeLqmHk8obZ.tCLES6nKE/WqANXpp9gz2', role: 'user', bio: null },
+      { id: 7, username: 'test', email: 'test@gmail.com', password: '$2b$10$qQ8T8ISY5PtDNp/a2pZFoe8H9Ji1j8y4My2CStJm3Vnt8b2Z1etWe', role: 'user', bio: 'Tài khoảng test' }
+    ];
+    
+    // Import users
+    for (const u of users) {
+      await db.pool.query(`INSERT INTO nguoi_dung (id, username, email, password, role, bio) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (email) DO NOTHING`, [u.id, u.username, u.email, u.password, u.role, u.bio]);
+      results.users++;
+    }
+    await db.pool.query(`SELECT setval('nguoi_dung_id_seq', (SELECT MAX(id) FROM nguoi_dung))`);
+    
+    // Import recipes (simplified)
+    const recipes = [
+      { id: 6, user_id: 3, title: 'Cơm cà ri gà', ingredients: '1/2 con gà, 1 gói cà ri bột, sữa tươi, khoai lang, hành tây, sả, hành tím, hành lá, gia vị', steps: 'Gà bóp muối rửa sạch, chặt nhỏ, ướp với muối đường và cà ri.||STEP||Khi sôi thì đậy nắp để nhỏ lửa cho gà thấm vị.||STEP||Cho khoai vào nồi, khoai mềm cho hành tây vào.||STEP||Múc cơm nóng ra dĩa, thêm cà ri xung quanh.', cook_time: '90 phút', servings: '3', views: 48, category: 'main', cuisine: 'vietnam' },
+      { id: 7, user_id: 3, title: 'Lẩu Thái Hải Sản', ingredients: '1 kg tôm, 1 kg nghêu, 500 g mực, 500 g bò, nấm các loại, rau cải', steps: 'Tôm bỏ chỉ lưng, rửa sạch.||STEP||Đặt nồi nước lên bếp, cho gia vị tomyum vào nấu sôi.||STEP||Dọn tất cả lên bàn, nhúng các loại topping.', cook_time: '60', servings: '5', views: 26, category: 'main', cuisine: 'vietnam' },
+      { id: 8, user_id: 3, title: 'Bò Lúc Lắc', ingredients: 'thịt bò, rau củ quả, tỏi, nước tương', steps: 'Ướp thịt với muối, hạt nêm, nước tương.||STEP||Sơ chế rau củ quả.||STEP||Xào thịt với tỏi phi thơm.', cook_time: '30 phút', servings: '2', views: 91, category: 'main', cuisine: 'vietnam' },
+      { id: 31, user_id: 1, title: 'Phở Bò Hà Nội', ingredients: '1 kg thịt bò, 1 kg xương lợn, sá sùng khô, quế, hoa hồi, thảo quả, hành lá, rau thơm, gừng', steps: 'Rửa sạch xương bò.||STEP||Cho xương bò vào hầm.||STEP||Nướng chín hành, gừng.||STEP||Rang hoa hồi, quế, thảo quả.||STEP||Nấu sôi nước hầm bò.||STEP||Cắt lát mỏng thịt bò.||STEP||Cho thêm hành lá, rau mùi.', cook_time: '2 tiếng', servings: '6', views: 123, category: 'main', cuisine: 'vietnam' },
+      { id: 32, user_id: 1, title: 'Cơm Tấm Sườn Nướng', ingredients: '2 miếng thịt cốt lếch, 2 quả trứng gà, dưa leo, sữa đặc, hành lá, gia vị', steps: 'Ướp thịt cốt lếch với hành đập dập, sữa đặc, nước mắm.||STEP||Cắt nhỏ hành lá.||STEP||Rửa sạch dưa leo.||STEP||Chiên trứng ốp la.||STEP||Nướng thịt.||STEP||Sắp mọi thứ lên đĩa.', cook_time: '0', servings: '2', views: 45, category: 'main', cuisine: 'vietnam' },
+      { id: 33, user_id: 1, title: 'Bánh Mì Thịt Nướng', ingredients: 'bánh mì, đồ chua, thịt heo, xã băm, tỏi, ớt, cà chua, hành lá, nước mắm, đường, chanh', steps: 'Làm đồ chua đơn giản.||STEP||Xay hỗn hợp tỏi, hành, xã.||STEP||Sốt ướp thịt nướng.||STEP||Ướp thịt.||STEP||Nướng thịt.||STEP||Làm nước mắm.||STEP||Chuẩn bị các thành phần.||STEP||Cho vào bánh mì.', cook_time: '1 tiếng', servings: '2 - 3', views: 48, category: 'main', cuisine: 'vietnam' }
+    ];
+    
+    for (const r of recipes) {
+      await db.pool.query(`INSERT INTO cong_thuc (id, user_id, title, ingredients, steps, cook_time, servings, views, category, cuisine) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`, [r.id, r.user_id, r.title, r.ingredients, r.steps, r.cook_time, r.servings, r.views, r.category, r.cuisine]);
+      results.recipes++;
+    }
+    await db.pool.query(`SELECT setval('cong_thuc_id_seq', (SELECT COALESCE(MAX(id), 1) FROM cong_thuc))`);
+    
+    // Import follows
+    const follows = [[4,1],[3,1],[3,5],[3,4],[3,6],[2,1],[2,5],[2,3],[2,4],[2,6],[6,1],[6,3],[6,2],[6,4],[1,4],[1,3],[1,2],[1,6],[1,5],[5,4],[5,6],[5,2],[5,3],[5,1]];
+    for (const [f, t] of follows) {
+      await db.pool.query(`INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [f, t]);
+      results.follows++;
+    }
+    
+    // Import favorites
+    const favorites = [[1,33],[1,31],[1,32],[6,21],[4,11],[5,20],[5,19],[3,6],[3,10],[3,9],[3,8],[3,7],[2,31],[2,6]];
+    for (const [u, r] of favorites) {
+      await db.pool.query(`INSERT INTO favorite (user_id, recipe_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [u, r]);
+      results.favorites++;
+    }
+    
+    // Import ratings
+    const ratings = [[33,2,5],[6,2,5],[33,1,4],[31,1,5],[32,1,5],[8,3,5],[7,3,5],[31,2,5],[8,1,5],[31,6,5],[31,4,5],[32,6,4],[32,4,4],[31,5,5],[31,3,1],[33,5,2],[6,1,4],[7,1,2],[8,6,2]];
+    for (const [rec, usr, rat] of ratings) {
+      await db.pool.query(`INSERT INTO danh_gia (recipe_id, user_id, rating) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [rec, usr, rat]);
+      results.ratings++;
+    }
+    
+    // Import comments
+    const comments = [[8,1,'Nhìn ngon thế'],[8,4,'để nấu thử xem sao'],[8,6,'được á'],[8,2,'UKm'],[31,3,'Ăn được không'],[31,1,'Sao lại không nhỉ']];
+    for (const [rec, usr, cmt] of comments) {
+      await db.pool.query(`INSERT INTO binh_luan (recipe_id, user_id, comment) VALUES ($1, $2, $3)`, [rec, usr, cmt]);
+      results.comments++;
+    }
+    
+    res.json({ success: true, message: 'Import completed!', results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ✅ Scheduled Tasks - chạy mỗi giờ (optional, không crash nếu lỗi)
 let scheduledTasks = null;
 try {
