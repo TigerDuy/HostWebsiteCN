@@ -164,7 +164,7 @@ router.put("/broadcast/:id/read", verifyToken, (req, res) => {
   const userId = req.user.id;
 
   db.query(
-    `INSERT IGNORE INTO user_broadcast_read (user_id, broadcast_id) VALUES (?, ?)`,
+    `INSERT INTO user_broadcast_read (user_id, broadcast_id) VALUES (?, ?) ON CONFLICT DO NOTHING`,
     [userId, broadcastId],
     (err) => {
       if (err) {
@@ -373,9 +373,10 @@ router.put("/read-all", verifyToken, (req, res) => {
 
       // Đánh dấu tất cả broadcast đã đọc
       db.query(
-        `INSERT IGNORE INTO user_broadcast_read (user_id, broadcast_id)
+        `INSERT INTO user_broadcast_read (user_id, broadcast_id)
          SELECT ?, bn.id FROM broadcast_notifications bn
-         WHERE NOT EXISTS (SELECT 1 FROM user_broadcast_read WHERE broadcast_id = bn.id AND user_id = ?)`,
+         WHERE NOT EXISTS (SELECT 1 FROM user_broadcast_read WHERE broadcast_id = bn.id AND user_id = ?)
+         ON CONFLICT DO NOTHING`,
         [userId, userId],
         (err2) => {
           if (err2) {

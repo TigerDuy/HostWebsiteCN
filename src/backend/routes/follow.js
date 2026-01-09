@@ -13,7 +13,7 @@ router.post("/:userId", verifyToken, (req, res) => {
   }
 
   db.query(
-    "INSERT INTO follow (follower_id, following_id) VALUES (?, ?)",
+    "INSERT INTO follows (follower_id, following_id) VALUES (?, ?)",
     [followerId, followingId],
     (err) => {
       if (err) {
@@ -33,7 +33,7 @@ router.delete("/:userId", verifyToken, (req, res) => {
   const followerId = req.user.id;
 
   db.query(
-    "DELETE FROM follow WHERE follower_id = ? AND following_id = ?",
+    "DELETE FROM follows WHERE follower_id = ? AND following_id = ?",
     [followerId, followingId],
     (err) => {
       if (err) {
@@ -50,7 +50,7 @@ router.get("/is-following/:userId", verifyToken, (req, res) => {
   const followerId = req.user.id;
 
   db.query(
-    "SELECT * FROM follow WHERE follower_id = ? AND following_id = ?",
+    "SELECT * FROM follows WHERE follower_id = ? AND following_id = ?",
     [followerId, followingId],
     (err, result) => {
       if (err) {
@@ -67,8 +67,8 @@ router.get("/counts/:userId", (req, res) => {
 
   db.query(
     `SELECT 
-      (SELECT COUNT(*) FROM follow WHERE following_id = ?) as followers,
-      (SELECT COUNT(*) FROM follow WHERE follower_id = ?) as following`,
+      (SELECT COUNT(*) FROM follows WHERE following_id = ?) as followers,
+      (SELECT COUNT(*) FROM follows WHERE follower_id = ?) as following`,
     [userId, userId],
     (err, result) => {
       if (err) {
@@ -92,7 +92,7 @@ router.get("/followers/:userId", (req, res) => {
   db.query(
     `SELECT n.id, n.username, n.avatar_url, n.bio
      FROM nguoi_dung n
-     JOIN follow f ON n.id = f.follower_id
+     JOIN follows f ON n.id = f.follower_id
      WHERE f.following_id = ?
      LIMIT ? OFFSET ?`,
     [userId, limit, offset],
@@ -102,7 +102,7 @@ router.get("/followers/:userId", (req, res) => {
       }
 
       db.query(
-        "SELECT COUNT(*) as total FROM follow WHERE following_id = ?",
+        "SELECT COUNT(*) as total FROM follows WHERE following_id = ?",
         [userId],
         (err2, countResult) => {
           res.json({
@@ -127,7 +127,7 @@ router.get("/following/:userId", (req, res) => {
   db.query(
     `SELECT n.id, n.username, n.avatar_url, n.bio
      FROM nguoi_dung n
-     JOIN follow f ON n.id = f.following_id
+     JOIN follows f ON n.id = f.following_id
      WHERE f.follower_id = ?
      LIMIT ? OFFSET ?`,
     [userId, limit, offset],
@@ -137,7 +137,7 @@ router.get("/following/:userId", (req, res) => {
       }
 
       db.query(
-        "SELECT COUNT(*) as total FROM follow WHERE follower_id = ?",
+        "SELECT COUNT(*) as total FROM follows WHERE follower_id = ?",
         [userId],
         (err2, countResult) => {
           res.json({

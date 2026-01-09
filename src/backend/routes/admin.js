@@ -18,7 +18,7 @@ router.get("/recipes", verifyAdminOrModerator(db), (req, res) => {
     JOIN nguoi_dung ON cong_thuc.user_id = nguoi_dung.id
     LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
     LEFT JOIN favorite ON cong_thuc.id = favorite.recipe_id
-    GROUP BY cong_thuc.id
+    GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
     ORDER BY cong_thuc.created_at DESC`,
     (err, result) => {
       if (err) return res.status(500).json({ message: "❌ Lỗi lấy danh sách công thức!" });

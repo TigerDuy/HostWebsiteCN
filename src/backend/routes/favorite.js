@@ -54,7 +54,7 @@ router.get("/list", verifyToken, (req, res) => {
      LEFT JOIN danh_gia ON cong_thuc.id = danh_gia.recipe_id
      LEFT JOIN favorite fav ON cong_thuc.id = fav.recipe_id
      WHERE favorite.user_id = ? 
-     GROUP BY cong_thuc.id
+     GROUP BY cong_thuc.id, nguoi_dung.id, nguoi_dung.username, nguoi_dung.avatar_url
      ORDER BY favorite.id DESC`,
     [userId],
     (err, result) => {
