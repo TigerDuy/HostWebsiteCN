@@ -77,159 +77,143 @@ router.post("/register", async (req, res) => {
 
   try {
     const hashed = await bcrypt.hash(password, 10);
-
-    db.query(
-      "INSERT INTO nguoi_dung (username, email, password) VALUES (?, ?, ?)",
-      [username, email, hashed],
-      (err, result) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({ message: "❌ Email hoặc tên đăng nhập đã tồn tại!" });
-          }
-          return res.status(500).json({ message: "❌ Lỗi server: " + err.message });
-        }
-        return res.json({ message: "Đăng ký thành công!" });
-      }
+    await db.query(
+      "INSERT INTO nguoi_dung (username, email, password) VALUES ($1, $2, $3)",
+      [username, email, hashed]
     );
+    return res.json({ message: "Đăng ký thành công!" });
   } catch (err) {
+    if (err.code === "23505") { // PostgreSQL unique violation
+      return res.status(400).json({ message: "❌ Email hoặc tên đăng nhập đã tồn tại!" });
+    }
     res.status(500).json({ message: "❌ Lỗi server: " + err.message });
   }
 });
 
 // ĐĂNG NHẬP
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  // Validate input
   if (!email || !password) {
     return res.status(400).json({ message: "Email và mật khẩu không được để trống!" });
   }
 
-  db.query(
-    "SELECT * FROM nguoi_dung WHERE email = ?",
-    [email],
-    async (err, result) => {
-      if (err || result.length === 0) {
-        return res.status(400).json({ message: "Email không tồn tại!" });
-      }
-
-      const user = result[0];
-
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) {
-        return res.status(400).json({ message: "Sai mật khẩu!" });
-      }
-
-      // Thêm role vào JWT payload
-      const token = jwt.sign(
-        { id: user.id, role: user.role }, 
-        SECRET_KEY, 
-        { expiresIn: "7d" }
-      );
-
-      return res.json({
-        message: "Đăng nhập thành công!",
-        token,
-        username: user.username,
-        role: user.role,
-        userId: user.id,
-        avatar_url: user.avatar_url || ""
-      });
+  try {
+    const result = await db.query("SELECT * FROM nguoi_dung WHERE email = $1", [email]);
+    
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Email không tồn tại!" });
     }
-  );
+
+    const user = result[0];
+    const match = await bcrypt.compare(password, user.password);
+    
+    if (!match) {
+      return res.status(400).json({ message: "Sai mật khẩu!" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role }, 
+      SECRET_KEY, 
+      { expiresIn: "7d" }
+    );
+
+    return res.json({
+      message: "Đăng nhập thành công!",
+      token,
+      username: user.username,
+      role: user.role,
+      userId: user.id,
+      avatar_url: user.avatar_url || ""
+    });
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 // KIỂM TRA ROLE HIỆN TẠI (để phát hiện thay đổi role)
-router.get("/check-role", verifyToken, (req, res) => {
+router.get("/check-role", verifyToken, async (req, res) => {
   const userId = req.user.id;
   const tokenRole = req.user.role;
 
-  db.query(
-    "SELECT role FROM nguoi_dung WHERE id = ?",
-    [userId],
-    (err, result) => {
-      if (err || result.length === 0) {
-        return res.status(401).json({ 
-          message: "Tài khoản không tồn tại!", 
-          forceLogout: true 
-        });
-      }
+  try {
+    const result = await db.query("SELECT role FROM nguoi_dung WHERE id = $1", [userId]);
+    
+    if (result.length === 0) {
+      return res.status(401).json({ message: "Tài khoản không tồn tại!", forceLogout: true });
+    }
 
-      const currentRole = result[0].role;
+    const currentRole = result[0].role;
 
-      // Nếu role trong DB khác với role trong token -> cần đăng nhập lại
-      if (currentRole !== tokenRole) {
-        return res.status(401).json({
-          message: "Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại!",
-          forceLogout: true,
-          oldRole: tokenRole,
-          newRole: currentRole
-        });
-      }
-
-      return res.json({
-        role: currentRole,
-        valid: true
+    if (currentRole !== tokenRole) {
+      return res.status(401).json({
+        message: "Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại!",
+        forceLogout: true,
+        oldRole: tokenRole,
+        newRole: currentRole
       });
     }
-  );
+
+    return res.json({ role: currentRole, valid: true });
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 // QUÊN MẬT KHẨU - STEP 1: Gửi OTP
-router.post("/forgot-password", (req, res) => {
+router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ message: "Vui lòng nhập email!" });
   }
 
-  // Kiểm tra email có tồn tại không
-  db.query(
-    "SELECT id, username FROM nguoi_dung WHERE email = ?",
-    [email],
-    (err, result) => {
-      if (err || result.length === 0) {
-        return res.status(400).json({ message: "Email không tồn tại trong hệ thống!" });
-      }
+  try {
+    const result = await db.query(
+      "SELECT id, username FROM nguoi_dung WHERE email = $1",
+      [email]
+    );
 
-      // Tạo OTP ngẫu nhiên 6 chữ số
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Lưu OTP vào store với thời gian hết hạn 10 phút
-      otpStore[email] = {
-        otp: otp,
-        expiresAt: Date.now() + 10 * 60 * 1000,
-        attempts: 0
-      };
-
-      // Gửi email OTP
-      const mailOptions = {
-        from: process.env.EMAIL_USER || "your-email@gmail.com",
-        to: email,
-        subject: "Mã xác nhận đặt lại mật khẩu - Ứng dụng nấu ăn",
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9;">
-            <h2 style="color: #333;">Đặt lại mật khẩu</h2>
-            <p>Xin chào <strong>${result[0].username}</strong>,</p>
-            <p>Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng sử dụng mã OTP dưới đây:</p>
-            <div style="background: #ff7f50; color: white; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px;">
-              ${otp}
-            </div>
-            <p style="color: #666;">Mã OTP này sẽ hết hạn trong 10 phút.</p>
-            <p style="color: #666;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
-          </div>
-        `
-      };
-
-      transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-          console.log("Email error:", err);
-          return res.status(500).json({ message: "Lỗi gửi email. Vui lòng thử lại sau!" });
-        }
-        return res.json({ message: "OTP đã được gửi đến email của bạn!" });
-      });
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Email không tồn tại trong hệ thống!" });
     }
-  );
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    otpStore[email] = {
+      otp: otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      attempts: 0
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || "your-email@gmail.com",
+      to: email,
+      subject: "Mã xác nhận đặt lại mật khẩu - Ứng dụng nấu ăn",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9;">
+          <h2 style="color: #333;">Đặt lại mật khẩu</h2>
+          <p>Xin chào <strong>${result[0].username}</strong>,</p>
+          <p>Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng sử dụng mã OTP dưới đây:</p>
+          <div style="background: #ff7f50; color: white; padding: 15px; border-radius: 5px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px;">
+            ${otp}
+          </div>
+          <p style="color: #666;">Mã OTP này sẽ hết hạn trong 10 phút.</p>
+          <p style="color: #666;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+        </div>
+      `
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.log("Email error:", err);
+        return res.status(500).json({ message: "Lỗi gửi email. Vui lòng thử lại sau!" });
+      }
+      return res.json({ message: "OTP đã được gửi đến email của bạn!" });
+    });
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 // QUÊN MẬT KHẨU - STEP 2: Xác nhận OTP
@@ -240,20 +224,17 @@ router.post("/verify-otp", (req, res) => {
     return res.status(400).json({ message: "Email và OTP không được để trống!" });
   }
 
-  // Kiểm tra OTP
   if (!otpStore[email]) {
     return res.status(400).json({ message: "OTP không hợp lệ hoặc đã hết hạn!" });
   }
 
   const storedOTP = otpStore[email];
 
-  // Kiểm tra thời gian hết hạn
   if (Date.now() > storedOTP.expiresAt) {
     delete otpStore[email];
     return res.status(400).json({ message: "OTP đã hết hạn! Vui lòng yêu cầu OTP mới." });
   }
 
-  // Kiểm tra OTP có khớp không
   if (storedOTP.otp !== otp) {
     storedOTP.attempts += 1;
     if (storedOTP.attempts >= 5) {
@@ -263,10 +244,7 @@ router.post("/verify-otp", (req, res) => {
     return res.status(400).json({ message: "OTP không chính xác!" });
   }
 
-  // OTP chính xác, trả về token tạm thời
   const tempToken = jwt.sign({ email, verified: true }, TEMP_SECRET, { expiresIn: "15m" });
-  
-  // Xóa OTP sau khi xác nhận
   delete otpStore[email];
 
   return res.json({
@@ -276,7 +254,7 @@ router.post("/verify-otp", (req, res) => {
 });
 
 // QUÊN MẬT KHẨU - STEP 3: Đặt lại mật khẩu
-router.post("/reset-password", (req, res) => {
+router.post("/reset-password", async (req, res) => {
   const { email, newPassword, tempToken } = req.body;
 
   if (!email || !newPassword || !tempToken) {
@@ -288,78 +266,74 @@ router.post("/reset-password", (req, res) => {
   }
 
   try {
-    // Xác nhận token tạm thời
     const decoded = jwt.verify(tempToken, TEMP_SECRET);
     
     if (decoded.email !== email || !decoded.verified) {
       return res.status(400).json({ message: "Token không hợp lệ!" });
     }
 
-    // Hash mật khẩu mới
-    bcrypt.hash(newPassword, 10, (err, hashed) => {
-      if (err) {
-        return res.status(500).json({ message: "Lỗi mã hóa mật khẩu!" });
-      }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    const result = await db.query(
+      "UPDATE nguoi_dung SET password = $1 WHERE email = $2",
+      [hashed, email]
+    );
 
-      // Cập nhật mật khẩu trong database
-      db.query(
-        "UPDATE nguoi_dung SET password = ? WHERE email = ?",
-        [hashed, email],
-        (err, result) => {
-          if (err || result.affectedRows === 0) {
-            return res.status(500).json({ message: "Lỗi cập nhật mật khẩu!" });
-          }
+    if (result.affectedRows === 0) {
+      return res.status(500).json({ message: "Lỗi cập nhật mật khẩu!" });
+    }
 
-          return res.json({ message: "Mật khẩu đã được đặt lại thành công!" });
-        }
-      );
-    });
+    return res.json({ message: "Mật khẩu đã được đặt lại thành công!" });
   } catch (err) {
     return res.status(400).json({ message: "Token hết hạn hoặc không hợp lệ!" });
   }
 });
 
 // LẤY THÔNG TIN PROFILE PUBLIC (không cần token)
-router.get("/public-profile/:userId", (req, res) => {
+router.get("/public-profile/:userId", async (req, res) => {
   const { userId } = req.params;
 
-  db.query(
-    "SELECT id, username, avatar_url, bio FROM nguoi_dung WHERE id = ?",
-    [userId],
-    (err, result) => {
-      if (err || result.length === 0) {
-        return res.status(400).json({ message: "Người dùng không tồn tại!" });
-      }
+  try {
+    const result = await db.query(
+      "SELECT id, username, avatar_url, bio FROM nguoi_dung WHERE id = $1",
+      [userId]
+    );
 
-      return res.json(result[0]);
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Người dùng không tồn tại!" });
     }
-  );
+
+    return res.json(result[0]);
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 // LẤY THÔNG TIN PROFILE
-router.get("/profile/:userId", verifyToken, (req, res) => {
-  // req.user được set bởi middleware verifyToken
+router.get("/profile/:userId", verifyToken, async (req, res) => {
   const { userId } = req.params;
 
   if (parseInt(userId) !== req.user.id) {
     return res.status(403).json({ message: "❌ Bạn không có quyền truy cập!" });
   }
 
-  db.query(
-    "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = ?",
-    [userId],
-    (err, result) => {
-      if (err || result.length === 0) {
-        return res.status(400).json({ message: "Người dùng không tồn tại!" });
-      }
+  try {
+    const result = await db.query(
+      "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = $1",
+      [userId]
+    );
 
-      return res.json(result[0]);
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Người dùng không tồn tại!" });
     }
-  );
+
+    return res.json(result[0]);
+  } catch (err) {
+    res.status(500).json({ message: "❌ Lỗi server: " + err.message });
+  }
 });
 
 // CẬP NHẬT THÔNG TIN PROFILE
-router.put("/profile/:userId", verifyToken, (req, res) => {
+router.put("/profile/:userId", verifyToken, async (req, res) => {
   const { userId } = req.params;
   const { username, email, avatar_url, bio } = req.body;
 
@@ -379,30 +353,28 @@ router.put("/profile/:userId", verifyToken, (req, res) => {
     return res.status(400).json({ message: "Email không hợp lệ!" });
   }
 
-  db.query(
-    "UPDATE nguoi_dung SET username = ?, email = ?, avatar_url = ?, bio = ? WHERE id = ?",
-    [username, email, avatar_url || null, bio || null, userId],
-    (err, result) => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({ message: "Email hoặc tên đăng nhập đã được sử dụng!" });
-        }
-        return res.status(500).json({ message: "Lỗi cập nhật thông tin!" });
-      }
+  try {
+    await db.query(
+      "UPDATE nguoi_dung SET username = $1, email = $2, avatar_url = $3, bio = $4 WHERE id = $5",
+      [username, email, avatar_url || null, bio || null, userId]
+    );
 
-      // Trả về thông tin người dùng sau cập nhật
-      db.query(
-        "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = ?",
-        [userId],
-        (err, result) => {
-          if (err || result.length === 0) {
-            return res.status(500).json({ message: "Lỗi lấy thông tin cập nhật!" });
-          }
-          return res.json(result[0]);
-        }
-      );
+    const result = await db.query(
+      "SELECT id, username, email, role, avatar_url, bio FROM nguoi_dung WHERE id = $1",
+      [userId]
+    );
+
+    if (result.length === 0) {
+      return res.status(500).json({ message: "Lỗi lấy thông tin cập nhật!" });
     }
-  );
+
+    return res.json(result[0]);
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(400).json({ message: "Email hoặc tên đăng nhập đã được sử dụng!" });
+    }
+    res.status(500).json({ message: "Lỗi cập nhật thông tin!" });
+  }
 });
 
 // ĐỔI MẬT KHẨU
@@ -423,40 +395,21 @@ router.post("/change-password/:userId", verifyToken, async (req, res) => {
   }
 
   try {
-    // Lấy mật khẩu hiện tại từ database
-    db.query(
-      "SELECT password FROM nguoi_dung WHERE id = ?",
-      [userId],
-      async (err, result) => {
-        if (err || result.length === 0) {
-          return res.status(400).json({ message: "Người dùng không tồn tại!" });
-        }
+    const result = await db.query("SELECT password FROM nguoi_dung WHERE id = $1", [userId]);
 
-        const userRecord = result[0];
+    if (result.length === 0) {
+      return res.status(400).json({ message: "Người dùng không tồn tại!" });
+    }
 
-        // Kiểm tra mật khẩu hiện tại
-        const match = await bcrypt.compare(currentPassword, userRecord.password);
-        if (!match) {
-          return res.status(400).json({ message: "Mật khẩu hiện tại không chính xác!" });
-        }
+    const match = await bcrypt.compare(currentPassword, result[0].password);
+    if (!match) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không chính xác!" });
+    }
 
-        // Hash mật khẩu mới
-        const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.query("UPDATE nguoi_dung SET password = $1 WHERE id = $2", [hashed, userId]);
 
-        // Cập nhật mật khẩu mới
-        db.query(
-          "UPDATE nguoi_dung SET password = ? WHERE id = ?",
-          [hashed, userId],
-          (err, result) => {
-            if (err) {
-              return res.status(500).json({ message: "Lỗi đổi mật khẩu!" });
-            }
-
-            return res.json({ message: "Đổi mật khẩu thành công!" });
-          }
-        );
-      }
-    );
+    return res.json({ message: "Đổi mật khẩu thành công!" });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi server: " + err.message });
   }
@@ -506,16 +459,8 @@ router.post("/profile/:userId/avatar", verifyToken, upload.single("avatar"), asy
     }
 
     // Update database
-    db.query(
-      "UPDATE nguoi_dung SET avatar_url = ? WHERE id = ?",
-      [avatarUrl, userId],
-      (err) => {
-        if (err) {
-          return res.status(500).json({ message: "❌ Lỗi cập nhật avatar!" });
-        }
-        return res.json({ message: "Upload avatar thành công!", avatar_url: avatarUrl });
-      }
-    );
+    await db.query("UPDATE nguoi_dung SET avatar_url = $1 WHERE id = $2", [avatarUrl, userId]);
+    return res.json({ message: "Upload avatar thành công!", avatar_url: avatarUrl });
   } catch (err) {
     return res.status(500).json({ message: "❌ Lỗi server: " + err.message });
   }

@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -32,144 +32,121 @@ const upload = multer({
   },
 });
 
-// Cấu hình thời gian (có thể điều chỉnh)
+// Cấu hình thời gian
 const CONFIG = {
-  VIOLATION_WINDOW_DAYS: 7, // Khoảng thời gian tính vi phạm (7 ngày)
-  VIOLATIONS_TO_HIDE: 3, // Số vi phạm để ẩn bài viết
-  POSTS_VIOLATIONS_TO_BLOCK: 3, // Số bài bị khóa để khóa tính năng đăng bài
-  REJECTED_REPORTS_TO_BLOCK: 3, // Số báo cáo bị bác bỏ để khóa tính năng báo cáo
-  COMMENT_VIOLATIONS_TO_BLOCK: 3, // Số vi phạm bình luận để khóa tính năng bình luận
-  BLOCK_DURATION_DAYS: 30, // Thời gian khóa (30 ngày)
-  HIDDEN_POST_DELETE_DAYS: 30, // Số ngày ẩn trước khi xóa tự động
-  REPORT_QUOTA_PER_TYPE: 3, // Số lần báo cáo mỗi loại
+  VIOLATION_WINDOW_DAYS: 7,
+  VIOLATIONS_TO_HIDE: 3,
+  POSTS_VIOLATIONS_TO_BLOCK: 3,
+  REJECTED_REPORTS_TO_BLOCK: 3,
+  COMMENT_VIOLATIONS_TO_BLOCK: 3,
+  BLOCK_DURATION_DAYS: 30,
+  HIDDEN_POST_DELETE_DAYS: 30,
+  REPORT_QUOTA_PER_TYPE: 3,
 };
 
 // ============ HELPER FUNCTIONS ============
 
 // Kiểm tra user có bị khóa báo cáo không
-const checkReportingBlocked = (userId, callback) => {
-  db.query(
-    `SELECT is_reporting_blocked, reporting_blocked_until FROM nguoi_dung WHERE id = ?`,
-    [userId],
-    (err, rows) => {
-      if (err || rows.length === 0) return callback(err, true);
-      const user = rows[0];
-      if (user.is_reporting_blocked) {
-        if (user.reporting_blocked_until && new Date(user.reporting_blocked_until) < new Date()) {
-          // Hết hạn khóa, mở khóa
-          db.query(
-            `UPDATE nguoi_dung SET is_reporting_blocked = FALSE, reporting_blocked_until = NULL WHERE id = ?`,
-            [userId]
-          );
-          return callback(null, false);
-        }
-        return callback(null, true, user.reporting_blocked_until);
-      }
-      callback(null, false);
-    }
+const checkReportingBlocked = async (userId) => {
+  const rows = await db.query(
+    `SELECT is_reporting_blocked, reporting_blocked_until FROM nguoi_dung WHERE id = $1`,
+    [userId]
   );
+  if (rows.length === 0) return { isBlocked: true };
+  
+  const user = rows[0];
+  if (user.is_reporting_blocked) {
+    if (user.reporting_blocked_until && new Date(user.reporting_blocked_until) < new Date()) {
+      await db.query(
+        `UPDATE nguoi_dung SET is_reporting_blocked = FALSE, reporting_blocked_until = NULL WHERE id = $1`,
+        [userId]
+      );
+      return { isBlocked: false };
+    }
+    return { isBlocked: true, blockedUntil: user.reporting_blocked_until };
+  }
+  return { isBlocked: false };
 };
 
 // Kiểm tra và lấy quota báo cáo
-const getReportQuota = (userId, reportType, callback) => {
-  db.query(
-    `SELECT * FROM user_report_quota WHERE user_id = ? AND report_type = ?`,
-    [userId, reportType],
-    (err, rows) => {
-      if (err) return callback(err);
-      if (rows.length === 0) {
-        // Tạo quota mới
-        db.query(
-          `INSERT INTO user_report_quota (user_id, report_type, remaining_reports) VALUES (?, ?, ?)`,
-          [userId, reportType, CONFIG.REPORT_QUOTA_PER_TYPE],
-          (err2) => {
-            if (err2) return callback(err2);
-            callback(null, { remaining_reports: CONFIG.REPORT_QUOTA_PER_TYPE });
-          }
-        );
-      } else {
-        callback(null, rows[0]);
-      }
-    }
+const getReportQuota = async (userId, reportType) => {
+  const rows = await db.query(
+    `SELECT * FROM user_report_quota WHERE user_id = $1 AND report_type = $2`,
+    [userId, reportType]
   );
+  
+  if (rows.length === 0) {
+    await db.query(
+      `INSERT INTO user_report_quota (user_id, report_type, remaining_reports) VALUES ($1, $2, $3)`,
+      [userId, reportType, CONFIG.REPORT_QUOTA_PER_TYPE]
+    );
+    return { remaining_reports: CONFIG.REPORT_QUOTA_PER_TYPE };
+  }
+  return rows[0];
 };
 
 // Giảm quota báo cáo
-const decreaseReportQuota = (userId, reportType, callback) => {
-  db.query(
+const decreaseReportQuota = async (userId, reportType) => {
+  await db.query(
     `UPDATE user_report_quota SET remaining_reports = remaining_reports - 1 
-     WHERE user_id = ? AND report_type = ? AND remaining_reports > 0`,
-    [userId, reportType],
-    callback
+     WHERE user_id = $1 AND report_type = $2 AND remaining_reports > 0`,
+    [userId, reportType]
   );
 };
 
 // Hoàn lại quota khi báo cáo được xử lý
-const restoreReportQuota = (userId, reportType, callback) => {
-  db.query(
-    `UPDATE user_report_quota SET remaining_reports = LEAST(remaining_reports + 1, ?) 
-     WHERE user_id = ? AND report_type = ?`,
-    [CONFIG.REPORT_QUOTA_PER_TYPE, userId, reportType],
-    callback
+const restoreReportQuota = async (userId, reportType) => {
+  await db.query(
+    `UPDATE user_report_quota SET remaining_reports = LEAST(remaining_reports + 1, $1) 
+     WHERE user_id = $2 AND report_type = $3`,
+    [CONFIG.REPORT_QUOTA_PER_TYPE, userId, reportType]
   );
 };
 
 // Kiểm tra số vi phạm trong khoảng thời gian
-const countViolationsInWindow = (recipeId, callback) => {
-  db.query(
+const countViolationsInWindow = async (recipeId) => {
+  const rows = await db.query(
     `SELECT COUNT(*) as count FROM recipe_violation_history 
-     WHERE recipe_id = ? AND violated_at > DATE_SUB(NOW(), INTERVAL ? DAY)`,
-    [recipeId, CONFIG.VIOLATION_WINDOW_DAYS],
-    (err, rows) => {
-      if (err) return callback(err);
-      callback(null, rows[0].count);
-    }
+     WHERE recipe_id = $1 AND violated_at > NOW() - INTERVAL '${CONFIG.VIOLATION_WINDOW_DAYS} days'`,
+    [recipeId]
   );
+  return parseInt(rows[0]?.count) || 0;
 };
 
 // Đếm số bài viết bị khóa trong tháng của user
-const countHiddenPostsThisMonth = (userId, callback) => {
-  db.query(
+const countHiddenPostsThisMonth = async (userId) => {
+  const rows = await db.query(
     `SELECT COUNT(*) as count FROM cong_thuc 
-     WHERE user_id = ? AND is_hidden = TRUE 
-     AND hidden_at > DATE_SUB(NOW(), INTERVAL 1 MONTH)`,
-    [userId],
-    (err, rows) => {
-      if (err) return callback(err);
-      callback(null, rows[0].count);
-    }
+     WHERE user_id = $1 AND is_hidden = TRUE 
+     AND hidden_at > NOW() - INTERVAL '1 month'`,
+    [userId]
   );
+  return parseInt(rows[0]?.count) || 0;
 };
 
 // Đếm số báo cáo bị bác bỏ trong tuần
-const countRejectedReportsThisWeek = (userId, callback) => {
-  db.query(
+const countRejectedReportsThisWeek = async (userId) => {
+  const rows = await db.query(
     `SELECT COUNT(*) as count FROM bao_cao 
-     WHERE user_id = ? AND status = 'rejected' 
-     AND updated_at > DATE_SUB(NOW(), INTERVAL 1 WEEK)`,
-    [userId],
-    (err, rows) => {
-      if (err) return callback(err);
-      callback(null, rows[0].count);
-    }
+     WHERE user_id = $1 AND status = 'rejected' 
+     AND updated_at > NOW() - INTERVAL '1 week'`,
+    [userId]
   );
+  return parseInt(rows[0]?.count) || 0;
 };
 
 // Đếm số vi phạm bình luận trong tháng
-const countCommentViolationsThisMonth = (userId, callback) => {
-  db.query(
+const countCommentViolationsThisMonth = async (userId) => {
+  const rows = await db.query(
     `SELECT COUNT(*) as count FROM comment_violation_history 
-     WHERE user_id = ? AND violated_at > DATE_SUB(NOW(), INTERVAL 1 MONTH)`,
-    [userId],
-    (err, rows) => {
-      if (err) return callback(err);
-      callback(null, rows[0].count);
-    }
+     WHERE user_id = $1 AND violated_at > NOW() - INTERVAL '1 month'`,
+    [userId]
   );
+  return parseInt(rows[0]?.count) || 0;
 };
 
 // ============ API BÁO CÁO BÀI VIẾT ============
-router.post("/recipe/:id", verifyToken, upload.single("image"), (req, res) => {
+router.post("/recipe/:id", verifyToken, upload.single("image"), async (req, res) => {
   const recipeId = req.params.id;
   const userId = req.user.id;
   const { reason } = req.body;
@@ -179,71 +156,48 @@ router.post("/recipe/:id", verifyToken, upload.single("image"), (req, res) => {
     return res.status(400).json({ message: "❌ Vui lòng nhập lý do báo cáo!" });
   }
 
-  // Kiểm tra user có bị khóa báo cáo không
-  checkReportingBlocked(userId, (err, isBlocked, blockedUntil) => {
-    if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quyền báo cáo!" });
+  try {
+    const { isBlocked, blockedUntil } = await checkReportingBlocked(userId);
     if (isBlocked) {
       const until = blockedUntil ? new Date(blockedUntil).toLocaleDateString("vi-VN") : "";
-      return res.status(403).json({ 
-        message: `❌ Bạn đã bị khóa tính năng báo cáo đến ${until}!` 
-      });
+      return res.status(403).json({ message: `❌ Bạn đã bị khóa tính năng báo cáo đến ${until}!` });
     }
 
-    // Kiểm tra quota
-    getReportQuota(userId, "recipe", (err, quota) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quota!" });
-      if (quota.remaining_reports <= 0) {
-        return res.status(403).json({ 
-          message: "❌ Bạn đã hết lượt báo cáo bài viết! Vui lòng chờ báo cáo trước đó được xử lý." 
-        });
-      }
+    const quota = await getReportQuota(userId, "recipe");
+    if (quota.remaining_reports <= 0) {
+      return res.status(403).json({ message: "❌ Bạn đã hết lượt báo cáo bài viết! Vui lòng chờ báo cáo trước đó được xử lý." });
+    }
 
-      // Kiểm tra bài viết tồn tại
-      db.query("SELECT id FROM cong_thuc WHERE id = ?", [recipeId], (err, rows) => {
-        if (err || rows.length === 0) {
-          return res.status(404).json({ message: "❌ Bài viết không tồn tại!" });
-        }
+    const recipeRows = await db.query("SELECT id FROM cong_thuc WHERE id = $1", [recipeId]);
+    if (recipeRows.length === 0) {
+      return res.status(404).json({ message: "❌ Bài viết không tồn tại!" });
+    }
 
-        // Kiểm tra báo cáo pending
-        db.query(
-          `SELECT id FROM bao_cao WHERE recipe_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'recipe'`,
-          [recipeId, userId],
-          (err, existing) => {
-            if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra báo cáo!" });
-            if (existing.length > 0) {
-              return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
-            }
+    const existing = await db.query(
+      `SELECT id FROM bao_cao WHERE recipe_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'recipe'`,
+      [recipeId, userId]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
+    }
 
-            // Tạo báo cáo mới
-            db.query(
-              `INSERT INTO bao_cao (recipe_id, user_id, reason, image_url, status, target_type)
-               VALUES (?, ?, ?, ?, 'pending', 'recipe')`,
-              [recipeId, userId, reason, imageUrl],
-              (err, result) => {
-                if (err) {
-                  console.error("❌ SQL error /report/recipe:", err);
-                  return res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
-                }
+    const result = await db.query(
+      `INSERT INTO bao_cao (recipe_id, user_id, reason, image_url, status, target_type)
+       VALUES ($1, $2, $3, $4, 'pending', 'recipe') RETURNING id`,
+      [recipeId, userId, reason, imageUrl]
+    );
 
-                // Giảm quota
-                decreaseReportQuota(userId, "recipe", () => {});
+    await decreaseReportQuota(userId, "recipe");
 
-                res.json({
-                  message: "✅ Báo cáo bài viết thành công!",
-                  reportId: result.insertId,
-                });
-              }
-            );
-          }
-        );
-      });
-    });
-  });
+    res.json({ message: "✅ Báo cáo bài viết thành công!", reportId: result[0]?.id });
+  } catch (err) {
+    console.error("❌ SQL error /report/recipe:", err);
+    res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
+  }
 });
 
-
 // ============ API BÁO CÁO BÌNH LUẬN ============
-router.post("/comment/:id", verifyToken, upload.single("image"), (req, res) => {
+router.post("/comment/:id", verifyToken, upload.single("image"), async (req, res) => {
   const commentId = req.params.id;
   const userId = req.user.id;
   const { reason } = req.body;
@@ -253,64 +207,50 @@ router.post("/comment/:id", verifyToken, upload.single("image"), (req, res) => {
     return res.status(400).json({ message: "❌ Vui lòng nhập lý do báo cáo!" });
   }
 
-  checkReportingBlocked(userId, (err, isBlocked, blockedUntil) => {
-    if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quyền báo cáo!" });
+  try {
+    const { isBlocked, blockedUntil } = await checkReportingBlocked(userId);
     if (isBlocked) {
       const until = blockedUntil ? new Date(blockedUntil).toLocaleDateString("vi-VN") : "";
       return res.status(403).json({ message: `❌ Bạn đã bị khóa tính năng báo cáo đến ${until}!` });
     }
 
-    getReportQuota(userId, "comment", (err, quota) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quota!" });
-      if (quota.remaining_reports <= 0) {
-        return res.status(403).json({ message: "❌ Bạn đã hết lượt báo cáo bình luận!" });
-      }
+    const quota = await getReportQuota(userId, "comment");
+    if (quota.remaining_reports <= 0) {
+      return res.status(403).json({ message: "❌ Bạn đã hết lượt báo cáo bình luận!" });
+    }
 
-      // Kiểm tra bình luận tồn tại
-      db.query("SELECT id, user_id, recipe_id FROM binh_luan WHERE id = ?", [commentId], (err, rows) => {
-        if (err || rows.length === 0) {
-          return res.status(404).json({ message: "❌ Bình luận không tồn tại!" });
-        }
+    const commentRows = await db.query("SELECT id, user_id, recipe_id FROM binh_luan WHERE id = $1", [commentId]);
+    if (commentRows.length === 0) {
+      return res.status(404).json({ message: "❌ Bình luận không tồn tại!" });
+    }
 
-        const comment = rows[0];
+    const comment = commentRows[0];
 
-        // Kiểm tra báo cáo pending
-        db.query(
-          `SELECT id FROM bao_cao WHERE comment_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'comment'`,
-          [commentId, userId],
-          (err, existing) => {
-            if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra báo cáo!" });
-            if (existing.length > 0) {
-              return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
-            }
+    const existing = await db.query(
+      `SELECT id FROM bao_cao WHERE comment_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'comment'`,
+      [commentId, userId]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
+    }
 
-            db.query(
-              `INSERT INTO bao_cao (comment_id, user_id, reason, image_url, status, target_type, recipe_id)
-               VALUES (?, ?, ?, ?, 'pending', 'comment', ?)`,
-              [commentId, userId, reason, imageUrl, comment.recipe_id],
-              (err, result) => {
-                if (err) {
-                  console.error("❌ SQL error /report/comment:", err);
-                  return res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
-                }
+    const result = await db.query(
+      `INSERT INTO bao_cao (comment_id, user_id, reason, image_url, status, target_type, recipe_id)
+       VALUES ($1, $2, $3, $4, 'pending', 'comment', $5) RETURNING id`,
+      [commentId, userId, reason, imageUrl, comment.recipe_id]
+    );
 
-                decreaseReportQuota(userId, "comment", () => {});
+    await decreaseReportQuota(userId, "comment");
 
-                res.json({
-                  message: "✅ Báo cáo bình luận thành công!",
-                  reportId: result.insertId,
-                });
-              }
-            );
-          }
-        );
-      });
-    });
-  });
+    res.json({ message: "✅ Báo cáo bình luận thành công!", reportId: result[0]?.id });
+  } catch (err) {
+    console.error("❌ SQL error /report/comment:", err);
+    res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
+  }
 });
 
 // ============ API BÁO CÁO NGƯỜI DÙNG ============
-router.post("/user/:id", verifyToken, upload.single("image"), (req, res) => {
+router.post("/user/:id", verifyToken, upload.single("image"), async (req, res) => {
   const reportedUserId = req.params.id;
   const userId = req.user.id;
   const { reason } = req.body;
@@ -324,227 +264,216 @@ router.post("/user/:id", verifyToken, upload.single("image"), (req, res) => {
     return res.status(400).json({ message: "❌ Bạn không thể báo cáo chính mình!" });
   }
 
-  checkReportingBlocked(userId, (err, isBlocked, blockedUntil) => {
-    if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quyền báo cáo!" });
+  try {
+    const { isBlocked, blockedUntil } = await checkReportingBlocked(userId);
     if (isBlocked) {
       const until = blockedUntil ? new Date(blockedUntil).toLocaleDateString("vi-VN") : "";
       return res.status(403).json({ message: `❌ Bạn đã bị khóa tính năng báo cáo đến ${until}!` });
     }
 
-    getReportQuota(userId, "user", (err, quota) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra quota!" });
-      if (quota.remaining_reports <= 0) {
-        return res.status(403).json({ message: "❌ Bạn đã hết lượt báo cáo người dùng!" });
-      }
+    const quota = await getReportQuota(userId, "user");
+    if (quota.remaining_reports <= 0) {
+      return res.status(403).json({ message: "❌ Bạn đã hết lượt báo cáo người dùng!" });
+    }
 
-      // Kiểm tra người dùng tồn tại
-      db.query("SELECT id, role FROM nguoi_dung WHERE id = ?", [reportedUserId], (err, rows) => {
-        if (err || rows.length === 0) {
-          return res.status(404).json({ message: "❌ Người dùng không tồn tại!" });
-        }
+    const userRows = await db.query("SELECT id, role FROM nguoi_dung WHERE id = $1", [reportedUserId]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: "❌ Người dùng không tồn tại!" });
+    }
 
-        if (rows[0].role === "admin" || rows[0].role === "moderator") {
-          return res.status(403).json({ message: "❌ Không thể báo cáo quản trị viên!" });
-        }
+    if (userRows[0].role === "admin" || userRows[0].role === "moderator") {
+      return res.status(403).json({ message: "❌ Không thể báo cáo quản trị viên!" });
+    }
 
-        // Kiểm tra báo cáo pending
-        db.query(
-          `SELECT id FROM bao_cao WHERE reported_user_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'user'`,
-          [reportedUserId, userId],
-          (err, existing) => {
-            if (err) return res.status(500).json({ message: "❌ Lỗi kiểm tra báo cáo!" });
-            if (existing.length > 0) {
-              return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
-            }
+    const existing = await db.query(
+      `SELECT id FROM bao_cao WHERE reported_user_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'user'`,
+      [reportedUserId, userId]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "❌ Báo cáo của bạn đang chờ xử lý!" });
+    }
 
-            db.query(
-              `INSERT INTO bao_cao (reported_user_id, user_id, reason, image_url, status, target_type)
-               VALUES (?, ?, ?, ?, 'pending', 'user')`,
-              [reportedUserId, userId, reason, imageUrl],
-              (err, result) => {
-                if (err) {
-                  console.error("❌ SQL error /report/user:", err);
-                  return res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
-                }
+    const result = await db.query(
+      `INSERT INTO bao_cao (reported_user_id, user_id, reason, image_url, status, target_type)
+       VALUES ($1, $2, $3, $4, 'pending', 'user') RETURNING id`,
+      [reportedUserId, userId, reason, imageUrl]
+    );
 
-                decreaseReportQuota(userId, "user", () => {});
+    await decreaseReportQuota(userId, "user");
 
-                res.json({
-                  message: "✅ Báo cáo người dùng thành công!",
-                  reportId: result.insertId,
-                });
-              }
-            );
-          }
-        );
-      });
-    });
-  });
+    res.json({ message: "✅ Báo cáo người dùng thành công!", reportId: result[0]?.id });
+  } catch (err) {
+    console.error("❌ SQL error /report/user:", err);
+    res.status(500).json({ message: "❌ Lỗi tạo báo cáo!" });
+  }
 });
 
 // ============ API HỦY BÁO CÁO ============
-router.delete("/recipe/:id", verifyToken, (req, res) => {
+router.delete("/recipe/:id", verifyToken, async (req, res) => {
   const recipeId = req.params.id;
   const userId = req.user.id;
 
-  db.query(
-    "DELETE FROM bao_cao WHERE recipe_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'recipe'",
-    [recipeId, userId],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
-      }
-
-      // Hoàn lại quota
-      restoreReportQuota(userId, "recipe", () => {});
-
-      return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  try {
+    const result = await db.query(
+      "DELETE FROM bao_cao WHERE recipe_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'recipe'",
+      [recipeId, userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
     }
-  );
+    await restoreReportQuota(userId, "recipe");
+    return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  } catch (err) {
+    console.error("❌ Lỗi hủy báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
+  }
 });
 
-router.delete("/comment/:id", verifyToken, (req, res) => {
+router.delete("/comment/:id", verifyToken, async (req, res) => {
   const commentId = req.params.id;
   const userId = req.user.id;
 
-  db.query(
-    "DELETE FROM bao_cao WHERE comment_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'comment'",
-    [commentId, userId],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
-      }
-
-      restoreReportQuota(userId, "comment", () => {});
-      return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  try {
+    const result = await db.query(
+      "DELETE FROM bao_cao WHERE comment_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'comment'",
+      [commentId, userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
     }
-  );
+    await restoreReportQuota(userId, "comment");
+    return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  } catch (err) {
+    console.error("❌ Lỗi hủy báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
+  }
 });
 
-router.delete("/user/:id", verifyToken, (req, res) => {
+router.delete("/user/:id", verifyToken, async (req, res) => {
   const reportedUserId = req.params.id;
   const userId = req.user.id;
 
-  db.query(
-    "DELETE FROM bao_cao WHERE reported_user_id = ? AND user_id = ? AND status = 'pending' AND target_type = 'user'",
-    [reportedUserId, userId],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
-      }
-
-      restoreReportQuota(userId, "user", () => {});
-      return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  try {
+    const result = await db.query(
+      "DELETE FROM bao_cao WHERE reported_user_id = $1 AND user_id = $2 AND status = 'pending' AND target_type = 'user'",
+      [reportedUserId, userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "❌ Không tìm thấy báo cáo để hủy!" });
     }
-  );
+    await restoreReportQuota(userId, "user");
+    return res.json({ message: "✅ Hủy báo cáo thành công!" });
+  } catch (err) {
+    console.error("❌ Lỗi hủy báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi hủy báo cáo!" });
+  }
 });
 
 // ============ API LẤY QUOTA BÁO CÁO ============
-router.get("/quota", verifyToken, (req, res) => {
+router.get("/quota", verifyToken, async (req, res) => {
   const userId = req.user.id;
 
-  db.query(
-    `SELECT report_type, remaining_reports FROM user_report_quota WHERE user_id = ?`,
-    [userId],
-    (err, rows) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi lấy quota!" });
+  try {
+    const rows = await db.query(
+      `SELECT report_type, remaining_reports FROM user_report_quota WHERE user_id = $1`,
+      [userId]
+    );
 
-      const quota = {
-        recipe: CONFIG.REPORT_QUOTA_PER_TYPE,
-        comment: CONFIG.REPORT_QUOTA_PER_TYPE,
-        user: CONFIG.REPORT_QUOTA_PER_TYPE,
-      };
+    const quota = {
+      recipe: CONFIG.REPORT_QUOTA_PER_TYPE,
+      comment: CONFIG.REPORT_QUOTA_PER_TYPE,
+      user: CONFIG.REPORT_QUOTA_PER_TYPE,
+    };
 
-      rows.forEach((row) => {
-        quota[row.report_type] = row.remaining_reports;
-      });
+    rows.forEach((row) => {
+      quota[row.report_type] = row.remaining_reports;
+    });
 
-      res.json(quota);
-    }
-  );
+    res.json(quota);
+  } catch (err) {
+    console.error("❌ Lỗi lấy quota:", err);
+    res.status(500).json({ message: "❌ Lỗi lấy quota!" });
+  }
 });
 
 // ============ API LẤY DANH SÁCH BÁO CÁO CỦA USER ============
-router.get("/my-reports", verifyToken, (req, res) => {
+router.get("/my-reports", verifyToken, async (req, res) => {
   const userId = req.user.id;
 
-  db.query(
-    `SELECT 
-      br.id, br.recipe_id, br.comment_id, br.reported_user_id, br.reason, 
-      br.image_url, br.status, br.rejected_reason, br.target_type,
-      br.created_at, br.updated_at, br.processed_by, br.processed_at,
-      cr.title as recipe_title,
-      bl.comment as comment_content,
-      ru.username as reported_username,
-      u_processor.username as processor_name
-     FROM bao_cao br
-     LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
-     LEFT JOIN binh_luan bl ON br.comment_id = bl.id
-     LEFT JOIN nguoi_dung ru ON br.reported_user_id = ru.id
-     LEFT JOIN nguoi_dung u_processor ON br.processed_by = u_processor.id
-     WHERE br.user_id = ?
-     ORDER BY br.created_at DESC`,
-    [userId],
-    (err, reports) => {
-      if (err) return res.status(500).json({ message: "❌ Lỗi lấy danh sách báo cáo!" });
-      res.json(reports);
-    }
-  );
+  try {
+    const reports = await db.query(
+      `SELECT 
+        br.id, br.recipe_id, br.comment_id, br.reported_user_id, br.reason, 
+        br.image_url, br.status, br.rejected_reason, br.target_type,
+        br.created_at, br.updated_at, br.processed_by, br.processed_at,
+        cr.title as recipe_title,
+        bl.comment as comment_content,
+        ru.username as reported_username,
+        u_processor.username as processor_name
+       FROM bao_cao br
+       LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
+       LEFT JOIN binh_luan bl ON br.comment_id = bl.id
+       LEFT JOIN nguoi_dung ru ON br.reported_user_id = ru.id
+       LEFT JOIN nguoi_dung u_processor ON br.processed_by = u_processor.id
+       WHERE br.user_id = $1
+       ORDER BY br.created_at DESC`,
+      [userId]
+    );
+    res.json(reports);
+  } catch (err) {
+    console.error("❌ Lỗi lấy danh sách báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi lấy danh sách báo cáo!" });
+  }
 });
 
-
 // ============ API ADMIN/MODERATOR XEM DANH SÁCH BÁO CÁO ============
-router.get("/", verifyAdminOrModerator(db), (req, res) => {
+router.get("/", verifyAdminOrModerator(db), async (req, res) => {
   const statusFilter = req.query.status || "pending";
-  const typeFilter = req.query.type || "all"; // all, recipe, comment, user
+  const typeFilter = req.query.type || "all";
 
-  let whereClause = "WHERE br.status = ?";
+  let whereClause = "WHERE br.status = $1";
   let params = [statusFilter];
 
   if (typeFilter !== "all") {
-    whereClause += " AND br.target_type = ?";
+    whereClause += " AND br.target_type = $2";
     params.push(typeFilter);
   }
 
-  db.query(
-    `SELECT 
-      br.id, br.recipe_id, br.comment_id, br.reported_user_id, br.user_id, 
-      br.reason, br.image_url, br.status, br.rejected_reason, br.target_type,
-      br.created_at, br.updated_at, br.processed_by, br.processed_at,
-      cr.title as recipe_title, cr.user_id as author_id,
-      bl.comment as comment_content, bl.user_id as comment_author_id,
-      u_reporter.username as reporter_name, u_reporter.email as reporter_email, u_reporter.id as reporter_id,
-      u_author.username as author_name, u_author.email as author_email,
-      u_comment_author.username as comment_author_name, u_comment_author.email as comment_author_email,
-      u_reported.username as reported_username, u_reported.email as reported_email,
-      u_processor.username as processor_name, u_processor.id as processor_id,
-      COUNT(*) OVER (PARTITION BY br.recipe_id, br.target_type) as total_reports_for_target
-     FROM bao_cao br
-     LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
-     LEFT JOIN binh_luan bl ON br.comment_id = bl.id
-     JOIN nguoi_dung u_reporter ON br.user_id = u_reporter.id
-     LEFT JOIN nguoi_dung u_author ON cr.user_id = u_author.id
-     LEFT JOIN nguoi_dung u_comment_author ON bl.user_id = u_comment_author.id
-     LEFT JOIN nguoi_dung u_reported ON br.reported_user_id = u_reported.id
-     LEFT JOIN nguoi_dung u_processor ON br.processed_by = u_processor.id
-     ${whereClause}
-     ORDER BY br.created_at DESC`,
-    params,
-    (err, reports) => {
-      if (err) {
-        console.error("❌ Lỗi lấy danh sách báo cáo:", err);
-        return res.status(500).json({ message: "❌ Lỗi lấy danh sách báo cáo!" });
-      }
-      res.json(reports);
-    }
-  );
+  try {
+    const reports = await db.query(
+      `SELECT 
+        br.id, br.recipe_id, br.comment_id, br.reported_user_id, br.user_id, 
+        br.reason, br.image_url, br.status, br.rejected_reason, br.target_type,
+        br.created_at, br.updated_at, br.processed_by, br.processed_at,
+        cr.title as recipe_title, cr.user_id as author_id,
+        bl.comment as comment_content, bl.user_id as comment_author_id,
+        u_reporter.username as reporter_name, u_reporter.email as reporter_email, u_reporter.id as reporter_id,
+        u_author.username as author_name, u_author.email as author_email,
+        u_comment_author.username as comment_author_name, u_comment_author.email as comment_author_email,
+        u_reported.username as reported_username, u_reported.email as reported_email,
+        u_processor.username as processor_name, u_processor.id as processor_id,
+        COUNT(*) OVER (PARTITION BY br.recipe_id, br.target_type) as total_reports_for_target
+       FROM bao_cao br
+       LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
+       LEFT JOIN binh_luan bl ON br.comment_id = bl.id
+       JOIN nguoi_dung u_reporter ON br.user_id = u_reporter.id
+       LEFT JOIN nguoi_dung u_author ON cr.user_id = u_author.id
+       LEFT JOIN nguoi_dung u_comment_author ON bl.user_id = u_comment_author.id
+       LEFT JOIN nguoi_dung u_reported ON br.reported_user_id = u_reported.id
+       LEFT JOIN nguoi_dung u_processor ON br.processed_by = u_processor.id
+       ${whereClause}
+       ORDER BY br.created_at DESC`,
+      params
+    );
+    res.json(reports);
+  } catch (err) {
+    console.error("❌ Lỗi lấy danh sách báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi lấy danh sách báo cáo!" });
+  }
 });
 
 // ============ API XỬ LÝ BÁO CÁO ============
-router.put("/:id/status", verifyAdminOrModerator(db), (req, res) => {
+router.put("/:id/status", verifyAdminOrModerator(db), async (req, res) => {
   const reportId = req.params.id;
   const { status, rejectedReason } = req.body;
   const processorId = req.user.id;
@@ -553,183 +482,163 @@ router.put("/:id/status", verifyAdminOrModerator(db), (req, res) => {
     return res.status(400).json({ message: "❌ Trạng thái không hợp lệ!" });
   }
 
-  // Lấy thông tin báo cáo
-  db.query(
-    `SELECT br.*, 
-      cr.user_id as recipe_author_id, cr.title as recipe_title,
-      bl.user_id as comment_author_id, bl.comment as comment_content,
-      u_reporter.email as reporter_email, u_reporter.username as reporter_name,
-      u_recipe_author.email as recipe_author_email, u_recipe_author.username as recipe_author_name,
-      u_comment_author.email as comment_author_email, u_comment_author.username as comment_author_name,
-      u_reported.email as reported_email, u_reported.username as reported_name
-     FROM bao_cao br
-     LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
-     LEFT JOIN binh_luan bl ON br.comment_id = bl.id
-     LEFT JOIN nguoi_dung u_reporter ON br.user_id = u_reporter.id
-     LEFT JOIN nguoi_dung u_recipe_author ON cr.user_id = u_recipe_author.id
-     LEFT JOIN nguoi_dung u_comment_author ON bl.user_id = u_comment_author.id
-     LEFT JOIN nguoi_dung u_reported ON br.reported_user_id = u_reported.id
-     WHERE br.id = ?`,
-    [reportId],
-    (err, reports) => {
-      if (err || reports.length === 0) {
-        return res.status(404).json({ message: "❌ Không tìm thấy báo cáo!" });
-      }
+  try {
+    const reports = await db.query(
+      `SELECT br.*, 
+        cr.user_id as recipe_author_id, cr.title as recipe_title,
+        bl.user_id as comment_author_id, bl.comment as comment_content,
+        u_reporter.email as reporter_email, u_reporter.username as reporter_name,
+        u_recipe_author.email as recipe_author_email, u_recipe_author.username as recipe_author_name,
+        u_comment_author.email as comment_author_email, u_comment_author.username as comment_author_name,
+        u_reported.email as reported_email, u_reported.username as reported_name
+       FROM bao_cao br
+       LEFT JOIN cong_thuc cr ON br.recipe_id = cr.id
+       LEFT JOIN binh_luan bl ON br.comment_id = bl.id
+       LEFT JOIN nguoi_dung u_reporter ON br.user_id = u_reporter.id
+       LEFT JOIN nguoi_dung u_recipe_author ON cr.user_id = u_recipe_author.id
+       LEFT JOIN nguoi_dung u_comment_author ON bl.user_id = u_comment_author.id
+       LEFT JOIN nguoi_dung u_reported ON br.reported_user_id = u_reported.id
+       WHERE br.id = $1`,
+      [reportId]
+    );
 
-      const report = reports[0];
-      let updateQuery, updateParams;
-
-      if (status === "accepted") {
-        updateQuery = "UPDATE bao_cao SET status = 'accepted', processed_by = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?";
-        updateParams = [processorId, reportId];
-      } else {
-        updateQuery = "UPDATE bao_cao SET status = 'rejected', rejected_reason = ?, processed_by = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?";
-        updateParams = [rejectedReason || "", processorId, reportId];
-      }
-
-      db.query(updateQuery, updateParams, (err) => {
-        if (err) return res.status(500).json({ message: "❌ Lỗi cập nhật báo cáo!" });
-
-        // Hoàn lại quota cho người báo cáo
-        restoreReportQuota(report.user_id, report.target_type, () => {});
-
-        if (status === "accepted") {
-          handleAcceptedReport(report, processorId, res);
-        } else {
-          handleRejectedReport(report, rejectedReason, res);
-        }
-      });
+    if (reports.length === 0) {
+      return res.status(404).json({ message: "❌ Không tìm thấy báo cáo!" });
     }
-  );
+
+    const report = reports[0];
+
+    if (status === "accepted") {
+      await db.query(
+        "UPDATE bao_cao SET status = 'accepted', processed_by = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2",
+        [processorId, reportId]
+      );
+    } else {
+      await db.query(
+        "UPDATE bao_cao SET status = 'rejected', rejected_reason = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3",
+        [rejectedReason || "", processorId, reportId]
+      );
+    }
+
+    await restoreReportQuota(report.user_id, report.target_type);
+
+    if (status === "accepted") {
+      await handleAcceptedReport(report, processorId, res);
+    } else {
+      await handleRejectedReport(report, rejectedReason, res);
+    }
+  } catch (err) {
+    console.error("❌ Lỗi xử lý báo cáo:", err);
+    res.status(500).json({ message: "❌ Lỗi xử lý báo cáo!" });
+  }
 });
 
 // Xử lý khi báo cáo được chấp nhận
-function handleAcceptedReport(report, processorId, res) {
-  if (report.target_type === "recipe") {
-    // Thêm vào lịch sử vi phạm
-    db.query(
-      `INSERT INTO recipe_violation_history (recipe_id, report_id) VALUES (?, ?)`,
-      [report.recipe_id, report.id]
-    );
+async function handleAcceptedReport(report, processorId, res) {
+  try {
+    if (report.target_type === "recipe") {
+      await db.query(
+        `INSERT INTO recipe_violation_history (recipe_id, report_id) VALUES ($1, $2)`,
+        [report.recipe_id, report.id]
+      );
 
-    // Kiểm tra số vi phạm trong khoảng thời gian
-    countViolationsInWindow(report.recipe_id, (err, count) => {
+      const count = await countViolationsInWindow(report.recipe_id);
+
       if (count >= CONFIG.VIOLATIONS_TO_HIDE) {
-        // Ẩn bài viết
-        db.query(
-          `UPDATE cong_thuc SET is_hidden = TRUE, hidden_at = NOW(), violation_count = ? WHERE id = ?`,
+        await db.query(
+          `UPDATE cong_thuc SET is_hidden = TRUE, hidden_at = NOW(), violation_count = $1 WHERE id = $2`,
           [count, report.recipe_id]
         );
 
-        // Kiểm tra số bài bị khóa của user trong tháng
-        countHiddenPostsThisMonth(report.recipe_author_id, (err, hiddenCount) => {
-          if (hiddenCount >= CONFIG.POSTS_VIOLATIONS_TO_BLOCK) {
-            // Khóa tính năng đăng bài
-            const blockUntil = new Date();
-            blockUntil.setDate(blockUntil.getDate() + CONFIG.BLOCK_DURATION_DAYS);
-            db.query(
-              `UPDATE nguoi_dung SET is_posting_blocked = TRUE, posting_blocked_until = ? WHERE id = ?`,
-              [blockUntil, report.recipe_author_id]
-            );
-          }
-        });
+        const hiddenCount = await countHiddenPostsThisMonth(report.recipe_author_id);
+        if (hiddenCount >= CONFIG.POSTS_VIOLATIONS_TO_BLOCK) {
+          const blockUntil = new Date();
+          blockUntil.setDate(blockUntil.getDate() + CONFIG.BLOCK_DURATION_DAYS);
+          await db.query(
+            `UPDATE nguoi_dung SET is_posting_blocked = TRUE, posting_blocked_until = $1 WHERE id = $2`,
+            [blockUntil, report.recipe_author_id]
+          );
+        }
 
-        // Gửi email thông báo bài viết bị ẩn
         sendViolationEmail(report, "recipe_hidden");
       } else {
-        // Cập nhật violation_count
-        db.query(
-          `UPDATE cong_thuc SET violation_count = ? WHERE id = ?`,
+        await db.query(
+          `UPDATE cong_thuc SET violation_count = $1 WHERE id = $2`,
           [count, report.recipe_id]
         );
         sendViolationEmail(report, "recipe_warning");
       }
-    });
-  } else if (report.target_type === "comment") {
-    // Kiểm tra comment_author_id có tồn tại không
-    if (!report.comment_author_id) {
-      console.error("❌ Không tìm thấy tác giả bình luận, có thể bình luận đã bị xóa");
-      // Vẫn gửi response thành công vì báo cáo đã được xử lý
-      return res.json({
-        message: "✅ Xác nhận báo cáo thành công! (Bình luận có thể đã bị xóa trước đó)",
-        reportId: report.id,
-        reportStatus: "accepted",
-      });
-    }
-
-    // Thêm vào lịch sử vi phạm bình luận
-    db.query(
-      `INSERT INTO comment_violation_history (comment_id, user_id, report_id) VALUES (?, ?, ?)`,
-      [report.comment_id, report.comment_author_id, report.id],
-      (err) => {
-        if (err) {
-          console.error("❌ Lỗi thêm lịch sử vi phạm bình luận:", err);
-        }
+    } else if (report.target_type === "comment") {
+      if (!report.comment_author_id) {
+        return res.json({
+          message: "✅ Xác nhận báo cáo thành công! (Bình luận có thể đã bị xóa trước đó)",
+          reportId: report.id,
+          reportStatus: "accepted",
+        });
       }
-    );
 
-    // Xóa bình luận vi phạm
-    db.query(`DELETE FROM binh_luan WHERE id = ?`, [report.comment_id]);
+      await db.query(
+        `INSERT INTO comment_violation_history (comment_id, user_id, report_id) VALUES ($1, $2, $3)`,
+        [report.comment_id, report.comment_author_id, report.id]
+      );
 
-    // Kiểm tra số vi phạm bình luận của user
-    countCommentViolationsThisMonth(report.comment_author_id, (err, count) => {
-      if (err) {
-        console.error("❌ Lỗi đếm vi phạm bình luận:", err);
-        count = 0;
-      }
+      await db.query(`DELETE FROM binh_luan WHERE id = $1`, [report.comment_id]);
+
+      const count = await countCommentViolationsThisMonth(report.comment_author_id);
       if (count >= CONFIG.COMMENT_VIOLATIONS_TO_BLOCK) {
         const blockUntil = new Date();
         blockUntil.setDate(blockUntil.getDate() + CONFIG.BLOCK_DURATION_DAYS);
-        db.query(
-          `UPDATE nguoi_dung SET is_commenting_blocked = TRUE, commenting_blocked_until = ? WHERE id = ?`,
+        await db.query(
+          `UPDATE nguoi_dung SET is_commenting_blocked = TRUE, commenting_blocked_until = $1 WHERE id = $2`,
           [blockUntil, report.comment_author_id]
         );
         sendViolationEmail(report, "comment_blocked");
       } else {
         sendViolationEmail(report, "comment_deleted");
       }
-    });
-  } else if (report.target_type === "user") {
-    // Kiểm tra reported user có tồn tại không
-    if (!report.reported_email) {
-      console.error("❌ Không tìm thấy thông tin người dùng bị báo cáo");
-    } else {
-      sendViolationEmail(report, "user_warning");
+    } else if (report.target_type === "user") {
+      if (report.reported_email) {
+        sendViolationEmail(report, "user_warning");
+      }
     }
+
+    sendThankYouEmail(report);
+
+    res.json({
+      message: "✅ Xác nhận báo cáo thành công!",
+      reportId: report.id,
+      reportStatus: "accepted",
+    });
+  } catch (err) {
+    console.error("❌ Lỗi xử lý báo cáo accepted:", err);
+    res.status(500).json({ message: "❌ Lỗi xử lý báo cáo!" });
   }
-
-  // Gửi email cảm ơn người báo cáo
-  sendThankYouEmail(report);
-
-  res.json({
-    message: "✅ Xác nhận báo cáo thành công!",
-    reportId: report.id,
-    reportStatus: "accepted",
-  });
 }
 
 // Xử lý khi báo cáo bị bác bỏ
-function handleRejectedReport(report, rejectedReason, res) {
-  // Đếm số báo cáo bị bác bỏ trong tuần
-  countRejectedReportsThisWeek(report.user_id, (err, count) => {
+async function handleRejectedReport(report, rejectedReason, res) {
+  try {
+    const count = await countRejectedReportsThisWeek(report.user_id);
     if (count >= CONFIG.REJECTED_REPORTS_TO_BLOCK) {
       const blockUntil = new Date();
       blockUntil.setDate(blockUntil.getDate() + CONFIG.BLOCK_DURATION_DAYS);
-      db.query(
-        `UPDATE nguoi_dung SET is_reporting_blocked = TRUE, reporting_blocked_until = ? WHERE id = ?`,
+      await db.query(
+        `UPDATE nguoi_dung SET is_reporting_blocked = TRUE, reporting_blocked_until = $1 WHERE id = $2`,
         [blockUntil, report.user_id]
       );
     }
-  });
 
-  // Gửi email thông báo bác bỏ
-  sendRejectionEmail(report, rejectedReason);
+    sendRejectionEmail(report, rejectedReason);
 
-  res.json({
-    message: "✅ Bác bỏ báo cáo thành công!",
-    reportId: report.id,
-    reportStatus: "rejected",
-  });
+    res.json({
+      message: "✅ Bác bỏ báo cáo thành công!",
+      reportId: report.id,
+      reportStatus: "rejected",
+    });
+  } catch (err) {
+    console.error("❌ Lỗi xử lý báo cáo rejected:", err);
+    res.status(500).json({ message: "❌ Lỗi xử lý báo cáo!" });
+  }
 }
 
 // ============ EMAIL FUNCTIONS ============
