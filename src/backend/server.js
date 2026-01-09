@@ -433,8 +433,43 @@ app.get("/import-data", async (req, res) => {
       await db.pool.query(`INSERT INTO broadcast_notifications (id, sender_id, message, image_url) VALUES (1, 2, 'Sáng mai Update', NULL) ON CONFLICT DO NOTHING`);
       results.broadcasts = 1;
     } catch(e) {}
+    await db.pool.query(`SELECT setval('broadcast_notifications_id_seq', (SELECT COALESCE(MAX(id), 1) FROM broadcast_notifications))`);
     
-    res.json({ success: true, message: 'Nhập khẩu hoàn tất!', results });
+    // Import bao_cao (reports) - quan trọng cho demo
+    const reports = [
+      [1, 8, 1, 'spam', 'rejected', 'test', 'recipe', null, null],
+      [2, 11, 1, 'test', 'accepted', null, 'recipe', null, null],
+      [3, 19, 1, 'test', 'pending', null, 'recipe', null, null],
+      [4, 33, 5, 'test', 'pending', null, 'recipe', null, null],
+      [5, 14, 1, 'spam', 'pending', null, 'recipe', null, null],
+      [6, 11, 5, 'test', 'pending', null, 'recipe', null, null]
+    ];
+    for (const [id, rec, usr, reason, status, rejected, target, cmt, reported] of reports) {
+      try { 
+        await db.pool.query(`INSERT INTO bao_cao (id, recipe_id, user_id, reason, status, rejected_reason, target_type, comment_id, reported_user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT DO NOTHING`, [id, rec, usr, reason, status, rejected, target, cmt, reported]); 
+        results.reports = (results.reports || 0) + 1; 
+      } catch(e) {}
+    }
+    await db.pool.query(`SELECT setval('bao_cao_id_seq', (SELECT COALESCE(MAX(id), 1) FROM bao_cao))`);
+    
+    // Import user_report_quota
+    const quotas = [[1, 2, 'comment', 1], [2, 1, 'user', 3], [3, 2, 'user', 3], [4, 7, 'user', 3]];
+    for (const [id, usr, type, remaining] of quotas) {
+      try { 
+        await db.pool.query(`INSERT INTO user_report_quota (id, user_id, report_type, remaining_reports) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, [id, usr, type, remaining]); 
+        results.quotas = (results.quotas || 0) + 1; 
+      } catch(e) {}
+    }
+    await db.pool.query(`SELECT setval('user_report_quota_id_seq', (SELECT COALESCE(MAX(id), 1) FROM user_report_quota))`);
+    
+    // Import user_theme_preferences
+    try {
+      await db.pool.query(`INSERT INTO user_theme_preferences (id, user_id, theme_data) VALUES (1, 1, '{"primary_color":"#ff7f50","theme_name":"Custom Theme"}') ON CONFLICT DO NOTHING`);
+      results.themes = 1;
+    } catch(e) {}
+    await db.pool.query(`SELECT setval('user_theme_preferences_id_seq', (SELECT COALESCE(MAX(id), 1) FROM user_theme_preferences))`);
+    
+    res.json({ success: true, message: 'Import hoàn tất! Tất cả dữ liệu đã sẵn sàng cho demo.', results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
