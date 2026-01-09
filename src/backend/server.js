@@ -422,6 +422,18 @@ app.get("/import-data", async (req, res) => {
       try { await db.pool.query(`INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [rec, tag]); results.recipeTags = (results.recipeTags || 0) + 1; } catch(e) {}
     }
     
+    // Import comment_likes
+    const commentLikes = [[3,4],[1,5],[1,6],[2,6],[1,2],[5,3]];
+    for (const [cmt, usr] of commentLikes) {
+      try { await db.pool.query(`INSERT INTO comment_likes (comment_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [cmt, usr]); results.commentLikes = (results.commentLikes || 0) + 1; } catch(e) {}
+    }
+    
+    // Import broadcast_notifications
+    try { 
+      await db.pool.query(`INSERT INTO broadcast_notifications (id, sender_id, message, image_url) VALUES (1, 2, 'Sáng mai Update', NULL) ON CONFLICT DO NOTHING`);
+      results.broadcasts = 1;
+    } catch(e) {}
+    
     res.json({ success: true, message: 'Nhập khẩu hoàn tất!', results });
   } catch (err) {
     res.status(500).json({ error: err.message });
