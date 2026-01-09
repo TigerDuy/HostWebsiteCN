@@ -371,22 +371,22 @@ app.get("/import-data", async (req, res) => {
       results.follows++;
     }
     
-    // Import favorites
-    const favorites = [[1,33],[1,31],[1,32],[6,21],[4,11],[5,20],[5,19],[3,6],[3,10],[3,9],[3,8],[3,7],[2,31],[2,6]];
+    // Import favorites (chỉ dùng recipe IDs đã import: 6,7,8,31,32,33)
+    const favorites = [[1,33],[1,31],[1,32],[3,6],[3,8],[3,7],[2,31],[2,6],[4,8],[5,7],[6,31],[6,32]];
     for (const [u, r] of favorites) {
       await db.pool.query(`INSERT INTO favorite (user_id, recipe_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [u, r]);
       results.favorites++;
     }
     
-    // Import ratings
-    const ratings = [[33,2,5],[6,2,5],[33,1,4],[31,1,5],[32,1,5],[8,3,5],[7,3,5],[31,2,5],[8,1,5],[31,6,5],[31,4,5],[32,6,4],[32,4,4],[31,5,5],[31,3,1],[33,5,2],[6,1,4],[7,1,2],[8,6,2]];
+    // Import ratings (chỉ dùng recipe IDs đã import)
+    const ratings = [[33,2,5],[6,2,5],[33,1,4],[31,1,5],[32,1,5],[8,3,5],[7,3,5],[31,2,5],[8,1,5],[31,6,5],[31,4,5],[32,6,4],[32,4,4],[31,5,5],[31,3,1],[33,5,2],[6,1,4],[7,1,2],[8,6,2],[6,4,3],[7,5,4],[8,4,5],[32,3,3],[33,3,4],[33,6,1]];
     for (const [rec, usr, rat] of ratings) {
       await db.pool.query(`INSERT INTO danh_gia (recipe_id, user_id, rating) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [rec, usr, rat]);
       results.ratings++;
     }
     
-    // Import comments
-    const comments = [[8,1,'Nhìn ngon thế'],[8,4,'để nấu thử xem sao'],[8,6,'được á'],[8,2,'UKm'],[31,3,'Ăn được không'],[31,1,'Sao lại không nhỉ']];
+    // Import comments (chỉ dùng recipe IDs đã import)
+    const comments = [[8,1,'Nhìn ngon thế'],[8,4,'để nấu thử xem sao'],[8,6,'được á'],[8,2,'UKm'],[31,3,'Ăn được không'],[31,1,'Sao lại không nhỉ'],[6,2,'Món này ngon lắm!'],[7,5,'Lẩu Thái tuyệt vời']];
     for (const [rec, usr, cmt] of comments) {
       await db.pool.query(`INSERT INTO binh_luan (recipe_id, user_id, comment) VALUES ($1, $2, $3)`, [rec, usr, cmt]);
       results.comments++;
