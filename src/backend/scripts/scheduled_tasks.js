@@ -15,16 +15,16 @@ const CONFIG = {
 function deleteOldHiddenPosts() {
   console.log("🔄 Kiểm tra bài viết ẩn cần xóa...");
   
-  db.query(
+  db.pool.query(
     `SELECT id, title, user_id FROM cong_thuc 
-     WHERE is_hidden = TRUE AND hidden_at < DATE_SUB(NOW(), INTERVAL ? DAY)`,
-    [CONFIG.HIDDEN_POST_DELETE_DAYS],
-    (err, posts) => {
+     WHERE is_hidden = TRUE AND hidden_at < NOW() - INTERVAL '${CONFIG.HIDDEN_POST_DELETE_DAYS} days'`,
+    (err, result) => {
       if (err) {
         console.error("❌ Lỗi kiểm tra bài viết ẩn:", err);
         return;
       }
 
+      const posts = result.rows;
       if (posts.length === 0) {
         console.log("✅ Không có bài viết nào cần xóa");
         return;
@@ -33,7 +33,7 @@ function deleteOldHiddenPosts() {
       console.log(`📋 Tìm thấy ${posts.length} bài viết cần xóa`);
 
       posts.forEach((post) => {
-        db.query("DELETE FROM cong_thuc WHERE id = ?", [post.id], (err2) => {
+        db.pool.query("DELETE FROM cong_thuc WHERE id = $1", [post.id], (err2) => {
           if (err2) {
             console.error(`❌ Lỗi xóa bài viết ${post.id}:`, err2);
           } else {
@@ -50,35 +50,35 @@ function resetExpiredBlocks() {
   console.log("🔄 Kiểm tra khóa tính năng hết hạn...");
 
   // Reset posting block
-  db.query(
+  db.pool.query(
     `UPDATE nguoi_dung SET is_posting_blocked = FALSE, posting_blocked_until = NULL 
      WHERE is_posting_blocked = TRUE AND posting_blocked_until < NOW()`,
     (err, result) => {
       if (err) console.error("❌ Lỗi reset posting block:", err);
-      else if (result.affectedRows > 0) 
-        console.log(`✅ Đã mở khóa đăng bài cho ${result.affectedRows} người dùng`);
+      else if (result.rowCount > 0) 
+        console.log(`✅ Đã mở khóa đăng bài cho ${result.rowCount} người dùng`);
     }
   );
 
   // Reset commenting block
-  db.query(
+  db.pool.query(
     `UPDATE nguoi_dung SET is_commenting_blocked = FALSE, commenting_blocked_until = NULL 
      WHERE is_commenting_blocked = TRUE AND commenting_blocked_until < NOW()`,
     (err, result) => {
       if (err) console.error("❌ Lỗi reset commenting block:", err);
-      else if (result.affectedRows > 0) 
-        console.log(`✅ Đã mở khóa bình luận cho ${result.affectedRows} người dùng`);
+      else if (result.rowCount > 0) 
+        console.log(`✅ Đã mở khóa bình luận cho ${result.rowCount} người dùng`);
     }
   );
 
   // Reset reporting block
-  db.query(
+  db.pool.query(
     `UPDATE nguoi_dung SET is_reporting_blocked = FALSE, reporting_blocked_until = NULL 
      WHERE is_reporting_blocked = TRUE AND reporting_blocked_until < NOW()`,
     (err, result) => {
       if (err) console.error("❌ Lỗi reset reporting block:", err);
-      else if (result.affectedRows > 0) 
-        console.log(`✅ Đã mở khóa báo cáo cho ${result.affectedRows} người dùng`);
+      else if (result.rowCount > 0) 
+        console.log(`✅ Đã mở khóa báo cáo cho ${result.rowCount} người dùng`);
     }
   );
 }
@@ -87,17 +87,17 @@ function resetExpiredBlocks() {
 function resetMonthlyViolations() {
   console.log("🔄 Reset monthly violations...");
 
-  db.query(
+  db.pool.query(
     `UPDATE nguoi_dung SET 
       monthly_post_violations = 0, 
       monthly_comment_violations = 0, 
       monthly_rejected_reports = 0,
       last_violation_reset = NOW()
-     WHERE last_violation_reset < DATE_SUB(NOW(), INTERVAL 1 MONTH)`,
+     WHERE last_violation_reset < NOW() - INTERVAL '1 month'`,
     (err, result) => {
       if (err) console.error("❌ Lỗi reset monthly violations:", err);
-      else if (result.affectedRows > 0) 
-        console.log(`✅ Đã reset violations cho ${result.affectedRows} người dùng`);
+      else if (result.rowCount > 0) 
+        console.log(`✅ Đã reset violations cho ${result.rowCount} người dùng`);
     }
   );
 }
