@@ -322,6 +322,14 @@ app.get("/import-data", async (req, res) => {
   try {
     const results = { users: 0, recipes: 0, follows: 0, favorites: 0, ratings: 0, comments: 0 };
     
+    // Xóa data cũ trước (theo thứ tự FK)
+    await db.pool.query(`DELETE FROM binh_luan`);
+    await db.pool.query(`DELETE FROM danh_gia`);
+    await db.pool.query(`DELETE FROM favorite`);
+    await db.pool.query(`DELETE FROM follows`);
+    await db.pool.query(`DELETE FROM cong_thuc`);
+    await db.pool.query(`DELETE FROM nguoi_dung`);
+    
     // Data từ MySQL
     const users = [
       { id: 1, username: 'Thanh Duy', email: 'TigerDuy2000@gmail.com', password: '$2b$10$ho56zHRrYaan5avYuzbyo.fQYDw09w0QABK/uWwku4o4ri3dw/JMq', role: 'moderator', bio: 'PiscesKing' },
