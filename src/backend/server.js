@@ -409,6 +409,19 @@ app.get("/import-data", async (req, res) => {
       try { await db.pool.query(`INSERT INTO binh_luan (recipe_id, user_id, comment) VALUES ($1, $2, $3)`, [rec, usr, cmt]); results.comments++; } catch(e) {}
     }
     
+    // Import tags
+    const tags = [[1,'Dễ làm','de-lam',8],[2,'Nhanh gọn','nhanh-gon',6],[3,'Healthy','healthy',1],[4,'Ít calo','it-calo',0],[5,'Chay','chay',0],[6,'Không gluten','khong-gluten',0],[7,'Cho trẻ em','cho-tre-em',6],[8,'Tiệc tùng','tiec-tung',4],[9,'Ngày lễ','ngay-le',3],[10,'Gia đình','gia-dinh',23]];
+    for (const [id, name, slug, count] of tags) {
+      try { await db.pool.query(`INSERT INTO tags (id, name, slug, usage_count) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, [id, name, slug, count]); results.tags = (results.tags || 0) + 1; } catch(e) {}
+    }
+    await db.pool.query(`SELECT setval('tags_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tags))`);
+    
+    // Import recipe_tags
+    const recipeTags = [[33,1],[33,2],[34,10],[31,10],[35,10],[35,8],[35,2],[21,10],[21,2],[21,1],[22,10],[22,2],[22,1],[22,7],[22,3],[23,10],[24,10],[24,7],[25,10],[11,10],[11,2],[12,10],[12,9],[13,1],[13,2],[13,7],[14,7],[14,10],[15,1],[15,10],[16,10],[17,10],[18,8],[18,10],[18,7],[20,10],[20,7],[20,1],[19,10],[6,10],[7,8],[7,10],[7,9],[8,10],[8,8],[9,10],[9,1],[10,10],[10,9],[10,1],[38,10]];
+    for (const [rec, tag] of recipeTags) {
+      try { await db.pool.query(`INSERT INTO recipe_tags (recipe_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [rec, tag]); results.recipeTags = (results.recipeTags || 0) + 1; } catch(e) {}
+    }
+    
     res.json({ success: true, message: 'Nhập khẩu hoàn tất!', results });
   } catch (err) {
     res.status(500).json({ error: err.message });
